@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import type { Slide } from '@/lib/instagram/generator'
 
