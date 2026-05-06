@@ -23,6 +23,10 @@ export type SlideType =
 export const SINGLE_POST_TYPES = ['stat_bombe', 'question', 'tesis', 'visual_bg', 'hook'] as const
 export type SinglePostType = (typeof SINGLE_POST_TYPES)[number]
 
+// Story-only slide types (Phase 11). 1080×1920 vertical, never paginated.
+export const STORY_TYPES = ['story_stat', 'story_question', 'story_teaser'] as const
+export type StoryType = (typeof STORY_TYPES)[number]
+
 export type Slide =
   | { n: number; type: 'hook'; title: string; subtitle?: string }
   | { n: number; type: 'tesis'; title: string; subtitle: string }
@@ -49,6 +53,24 @@ export type Slide =
   | { n: number; type: 'visual_bg'; bgWord: string; titleLines: string; accentLine?: number }
   | { n: number; type: 'timeline'; title: string; steps: string }
   | { n: number; type: 'question'; questionLines: string; sub?: string }
+  | {
+      n: number
+      type: 'story_stat'
+      stat: string
+      label: string
+      sub?: string
+      cta?: string
+      ctaUrl?: string
+    }
+  | {
+      n: number
+      type: 'story_question'
+      questionLines: string
+      sub?: string
+      cta?: string
+      ctaUrl?: string
+    }
+  | { n: number; type: 'story_teaser'; title: string; teaserText?: string }
 
 export interface GeneratedCarousel {
   slides: Slide[]
@@ -67,11 +89,25 @@ export type SinglePostSlide =
   | { type: 'visual_bg'; bgWord: string; titleLines: string; accentLine?: number }
   | { type: 'hook'; title: string; subtitle?: string }
 
+// Phase 11: Haiku also returns a story slide (1080×1920 vertical, no
+// pagination). Like single_post it shares caption+hashtags with the carousel.
+export type StorySlide =
+  | { type: 'story_stat'; stat: string; label: string; sub?: string; cta?: string; ctaUrl?: string }
+  | {
+      type: 'story_question'
+      questionLines: string
+      sub?: string
+      cta?: string
+      ctaUrl?: string
+    }
+  | { type: 'story_teaser'; title: string; teaserText?: string }
+
 export interface GeneratedDraft {
   carousel: GeneratedCarousel
-  // single_post is best-effort. If Haiku fails to produce a valid one, the
-  // pipeline still ships the carousel and logs a warning.
+  // single_post and story are best-effort. If Haiku fails to produce one,
+  // the pipeline still ships whatever's valid and logs a warning.
   single_post: SinglePostSlide | null
+  story: StorySlide | null
   caption: string
   hashtags: string[]
 }
@@ -232,6 +268,11 @@ Format exemple (PATTERN B avec mix de templates + single_post stat_bombe — ada
     "label": "DE TUS CLIENTES\\nDEJARÁN RESEÑA",
     "sub": "si gamificas la experiencia · spinly.lat"
   },
+  "story": {
+    "type": "story_teaser",
+    "title": "TU MESERO NO PIDE|RESEÑAS. AQUÍ|*5 RAZONES*.",
+    "teaserText": "El post completo en mi feed."
+  },
   "caption": "...",
   "hashtags": ["#reseñasGoogle", "#PymesLatam"]
 }
@@ -251,23 +292,44 @@ Choisis 1 type parmi ces 5 selon ce qui colle le mieux à l'angle :
 
 Mêmes champs que dans le carrousel (sauf que pas de "n" puisque c'est 1 slide). Pas de référence "voir slide X" ou "détails plus loin".
 
-FORMAT JSON FINAL (carousel + single_post + caption + hashtags) :
+PHASE 11 — TU DOIS AUSSI GÉNÉRER UNE story (1080×1920 verticale) :
+
+3 templates story dispos :
+
+1. **story_stat** — Chiffre énorme + label + CTA en bas
+   { "type": "story_stat", "stat": "x6", "label": "MÁS RESEÑAS\\nEN GOOGLE", "sub": "vs cafés sin Spinly", "cta": "audita gratis", "ctaUrl": "spinly.lat/audit" }
+   - "stat" court (3-5 caractères)
+   - "label" 1-2 lignes en MAJUSCULES, séparées par \\n
+   - "sub" optionnel, "cta"/"ctaUrl" optionnels (défaut "audita gratis" / "spinly.lat/audit")
+
+2. **story_question** — Question piercante + énorme ? en background + CTA
+   { "type": "story_question", "questionLines": "¿CUÁNTAS|RESEÑAS PERDISTE|SIN *PEDIRLAS*?", "sub": "Tu competencia las pidió. Tú no.", "cta": "audita gratis", "ctaUrl": "spinly.lat/audit" }
+   - "questionLines" 2-5 lignes courtes séparées par |, *mot* possible
+
+3. **story_teaser** — Annonce le post du feed avec flèche "ver en el feed"
+   { "type": "story_teaser", "title": "TU MESERO NO PIDE|RESEÑAS. AQUÍ|*5 RAZONES*.", "teaserText": "El post completo en mi feed." }
+   - "title" max 4 lignes séparées par |, *mot* accentué
+   - Pas de CTA — le but est de driver vers le feed
+
+RÈGLES STORY :
+- 3 sec d'attention max sur Instagram → phrases ULTRA courtes
+- Choisis le type selon l'angle :
+  - story_stat si tu as une stat qui parle seule (x6, +150, 68%)
+  - story_question si tu veux interpeller (provocation)
+  - story_teaser pour driver vers le post du feed (recommandé 1 fois sur 2)
+- La story est COMPLÉMENTAIRE au carousel et au single_post — pas une copie
+
+FORMAT JSON FINAL (carousel + single_post + story + caption + hashtags) :
 
 {
-  "carousel": {
-    "slides": [...les 10 slides...]
-  },
-  "single_post": {
-    "type": "stat_bombe",
-    "stat": "x6",
-    "label": "MÁS RESEÑAS\\nEN GOOGLE MAPS",
-    "sub": "vs cafés sin Spinly"
-  },
+  "carousel": { "slides": [...10 slides...] },
+  "single_post": { "type": "...", ... },
+  "story": { "type": "...", ... },
   "caption": "...",
   "hashtags": ["#...", "#..."]
 }
 
-Le single_post utilise les MÊMES caption et hashtags que le carrousel (pas besoin de les répéter).`
+Tous partagent les MÊMES caption et hashtags (pas besoin de les répéter).`
 
   const response = await anthropic.messages.create({
     model: HAIKU_MODEL,
@@ -311,6 +373,17 @@ Le single_post utilise les MÊMES caption et hashtags que le carrousel (pas beso
     }
   }
 
+  // story: same best-effort pattern as single_post.
+  let story: StorySlide | null = null
+  if (parsed.story && parsed.story.type) {
+    const t = parsed.story.type
+    if ((STORY_TYPES as readonly string[]).includes(t)) {
+      story = parsed.story as StorySlide
+    } else {
+      console.warn(`[generator] story type "${t}" not in STORY_TYPES, skipping`)
+    }
+  }
+
   return {
     carousel: {
       slides: carouselSlides,
@@ -318,6 +391,7 @@ Le single_post utilise les MÊMES caption et hashtags que le carrousel (pas beso
       hashtags: parsed.hashtags
     },
     single_post: singlePost,
+    story,
     caption: parsed.caption,
     hashtags: parsed.hashtags
   }

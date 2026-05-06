@@ -41,11 +41,18 @@ export async function GET(req: Request) {
   }
 
   type Result =
-    | { ok: true; carouselId: string; singlePostId: string | null; hook: string }
+    | {
+        ok: true
+        carouselId: string
+        singlePostId: string | null
+        storyId: string | null
+        hook: string
+      }
     | { ok: false; angleId: string; error: string }
 
   const results: Result[] = []
   let totalSinglePosts = 0
+  let totalStories = 0
   for (const angle of angles) {
     try {
       const draft = await generateDraft(angle)
@@ -86,10 +93,39 @@ export async function GET(req: Request) {
           .single()
 
         if (singleErr) {
-          console.warn(`[ig-generate] single_post insert failed for angle ${angle.id}: ${singleErr.message}`)
+          console.warn(
+            `[ig-generate] single_post insert failed for angle ${angle.id}: ${singleErr.message}`
+          )
         } else {
           singlePostId = singlePost.id
           totalSinglePosts++
+        }
+      }
+
+      // 3. Insert the story (Phase 11) if Haiku produced one.
+      let storyId: string | null = null
+      if (draft.story) {
+        const storySlide = { n: 1, ...draft.story }
+        const { data: storyPost, error: storyErr } = await supabase
+          .from('ig_posts')
+          .insert({
+            angle_id: angle.id,
+            status: 'draft',
+            content_type: 'story',
+            slides_json: [storySlide],
+            caption: draft.caption,
+            hashtags: draft.hashtags
+          })
+          .select()
+          .single()
+
+        if (storyErr) {
+          console.warn(
+            `[ig-generate] story insert failed for angle ${angle.id}: ${storyErr.message}`
+          )
+        } else {
+          storyId = storyPost.id
+          totalStories++
         }
       }
 
@@ -103,7 +139,13 @@ export async function GET(req: Request) {
 
       const firstSlide = draft.carousel.slides[0]
       const hookText = firstSlide.type === 'hook' ? firstSlide.title : ''
-      results.push({ ok: true, carouselId: carouselPost.id, singlePostId, hook: hookText })
+      results.push({
+        ok: true,
+        carouselId: carouselPost.id,
+        singlePostId,
+        storyId,
+        hook: hookText
+      })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       results.push({ ok: false, angleId: angle.id, error: message })
@@ -115,7 +157,7 @@ export async function GET(req: Request) {
 
   try {
     await sendTelegramMessage(
-      `${TG_EMOJIS.spin} IG generator: ${successCount}/${angles.length} carrousels + ${totalSinglePosts} posts simples générés.\n` +
+      `${TG_EMOJIS.spin} IG generator: ${successCount}/${angles.length} carrousels + ${totalSinglePosts} posts simples + ${totalStories} stories générés.\n` +
         `Valide sur ${appUrl}/admin/instagram`
     )
   } catch {}
@@ -123,6 +165,7 @@ export async function GET(req: Request) {
   return NextResponse.json({
     generated: successCount,
     singlePosts: totalSinglePosts,
+    stories: totalStories,
     total: angles.length,
     results
   })

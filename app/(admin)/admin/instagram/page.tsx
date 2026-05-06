@@ -35,7 +35,7 @@ export default async function InstagramKanban({
   // Phase 10: optional URL filter ?filter=carousel | single_post
   const filter = searchParams.filter
   const posts =
-    filter === 'carousel' || filter === 'single_post'
+    filter === 'carousel' || filter === 'single_post' || filter === 'story'
       ? allPosts.filter((p) => (p.content_type ?? 'carousel') === filter)
       : allPosts
 
@@ -68,7 +68,8 @@ export default async function InstagramKanban({
           {[
             { key: 'all', label: 'Tous', value: '' },
             { key: 'carousel', label: '🎴 Carrousels', value: 'carousel' },
-            { key: 'single_post', label: '📷 Posts simples', value: 'single_post' }
+            { key: 'single_post', label: '📷 Posts simples', value: 'single_post' },
+            { key: 'story', label: '📱 Stories', value: 'story' }
           ].map((tab) => {
             const active =
               tab.value === '' ? !filter : filter === tab.value

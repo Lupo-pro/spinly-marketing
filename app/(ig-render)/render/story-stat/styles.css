@@ -1,0 +1,81 @@
+.slide.story-stat .ss-content {
+  position: absolute;
+  top: 50%;
+  left: var(--safe-pad);
+  right: var(--safe-pad);
+  transform: translateY(-55%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.slide.story-stat .ss-stat {
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 600px;
+  line-height: 0.85;
+  letter-spacing: -25px;
+  background: var(--spinly-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 40px;
+}
+
+.slide.story-stat .ss-label {
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 64px;
+  line-height: 1.1;
+  letter-spacing: -1px;
+  text-transform: uppercase;
+  color: var(--white);
+  margin-bottom: 28px;
+}
+
+.slide.story-stat .ss-sub {
+  font-family: var(--font-manrope), sans-serif;
+  font-size: 32px;
+  font-weight: 500;
+  color: var(--gray-2);
+}
+
+.slide.story-stat .ss-cta-block {
+  position: absolute;
+  bottom: 280px;
+  left: var(--safe-pad);
+  right: var(--safe-pad);
+  background: linear-gradient(95deg, #F59E2C 0%, #FF4500 100%);
+  border-radius: 32px;
+  padding: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 5;
+}
+
+.slide.story-stat .ss-cta-text-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.slide.story-stat .ss-cta-text {
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 44px;
+  line-height: 1;
+  letter-spacing: -1px;
+  text-transform: uppercase;
+  color: var(--white);
+  margin-bottom: 8px;
+}
+
+.slide.story-stat .ss-cta-url {
+  font-family: var(--font-manrope), sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--white);
+  opacity: 0.9;
+}
+
+.slide.story-stat .ss-cta-arrow {
+  flex-shrink: 0;
+}

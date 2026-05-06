@@ -36,12 +36,26 @@ async function getBrowser(): Promise<Browser> {
   return browserPromise
 }
 
-export async function renderSlideToPng(url: string): Promise<Buffer> {
+// Phase 11: viewport adapts to content_type — stories are 1080×1920 vertical
+// (Instagram native story format), everything else is 1080×1350 portrait.
+const FORMAT_DIMENSIONS = {
+  carousel: { width: 1080, height: 1350 },
+  single_post: { width: 1080, height: 1350 },
+  story: { width: 1080, height: 1920 }
+} as const
+
+export type RenderFormat = keyof typeof FORMAT_DIMENSIONS
+
+export async function renderSlideToPng(
+  url: string,
+  format: RenderFormat = 'carousel'
+): Promise<Buffer> {
   const browser = await getBrowser()
   const page = await browser.newPage()
+  const dim = FORMAT_DIMENSIONS[format]
 
   try {
-    await page.setViewport({ width: 1080, height: 1350, deviceScaleFactor: 1 })
+    await page.setViewport({ ...dim, deviceScaleFactor: 1 })
 
     await page.setExtraHTTPHeaders({
       'x-render-secret': process.env.CRON_SECRET || ''
@@ -59,13 +73,13 @@ export async function renderSlideToPng(url: string): Promise<Buffer> {
     const png = await page.screenshot({
       type: 'png',
       omitBackground: false,
-      clip: { x: 0, y: 0, width: 1080, height: 1350 }
+      clip: { x: 0, y: 0, ...dim }
     })
 
     return Buffer.from(png)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    console.error(`[render-error] step=page-render url=${url} error=${message}`)
+    console.error(`[render-error] step=page-render url=${url} format=${format} error=${message}`)
     throw err
   } finally {
     await page.close().catch(() => {})

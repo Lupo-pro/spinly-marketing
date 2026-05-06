@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     async (slide) => {
       try {
         const templateUrl = slideToTemplateUrl(slide, contentType)
-        const png = await renderSlideToPng(templateUrl)
+        const png = await renderSlideToPng(templateUrl, contentType)
 
         const filename = `${postId}/slide-${String(slide.n).padStart(2, '0')}.png`
         const { error: uploadErr } = await supabase.storage

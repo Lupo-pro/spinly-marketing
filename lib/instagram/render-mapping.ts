@@ -119,6 +119,35 @@ function buildSlideUrl(slide: Slide): string {
       })
       return `${APP_URL}/render/question?${params.toString()}`
     }
+
+    case 'story_stat': {
+      const params = new URLSearchParams({
+        stat: slide.stat,
+        label: slide.label,
+        sub: slide.sub || '',
+        cta: slide.cta || 'audita gratis',
+        ctaUrl: slide.ctaUrl || 'spinly.lat/audit'
+      })
+      return `${APP_URL}/render/story-stat?${params.toString()}`
+    }
+
+    case 'story_question': {
+      const params = new URLSearchParams({
+        questionLines: slide.questionLines,
+        sub: slide.sub || '',
+        cta: slide.cta || 'audita gratis',
+        ctaUrl: slide.ctaUrl || 'spinly.lat/audit'
+      })
+      return `${APP_URL}/render/story-question?${params.toString()}`
+    }
+
+    case 'story_teaser': {
+      const params = new URLSearchParams({
+        title: slide.title,
+        teaserText: slide.teaserText || 'El post completo en mi feed.'
+      })
+      return `${APP_URL}/render/story-teaser?${params.toString()}`
+    }
   }
 }
 

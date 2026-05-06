@@ -64,6 +64,12 @@ export type PostCardData = {
   ig_angles: { axis: string } | null
 }
 
+const TYPE_LABEL: Record<string, string> = {
+  carousel: '🎴 Carrousel',
+  single_post: '📷 Post',
+  story: '📱 Story'
+}
+
 export default function PostCard({ post }: { post: PostCardData }) {
   const firstSlide = post.slides_json?.[0]
   const hook = firstSlide?.type === 'hook' ? firstSlide.title : '(no hook)'
@@ -72,8 +78,8 @@ export default function PostCard({ post }: { post: PostCardData }) {
 
   const slidesCount = getSlidesCount(post.slide_image_urls)
   const contentType = post.content_type ?? 'carousel'
-  // Phase 10: a carousel is ready when 10 PNGs are rendered; a single_post needs 1.
-  const expectedSlides = contentType === 'single_post' ? 1 : 10
+  // Carousels expect 10 rendered PNGs; single_post and story expect 1.
+  const expectedSlides = contentType === 'carousel' ? 10 : 1
   const hasRendered = slidesCount === expectedSlides
   const isApproved = post.status?.toLowerCase().trim() === 'approved'
   const isReady = isApproved && hasRendered
@@ -97,7 +103,7 @@ export default function PostCard({ post }: { post: PostCardData }) {
             {axis ? AXIS_LABELS[axis] ?? axis : 'no axis'}
           </span>
           <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
-            {contentType === 'single_post' ? '📷 Post' : '🎴 Carrousel'}
+            {TYPE_LABEL[contentType] ?? '🎴 Carrousel'}
           </span>
         </div>
         <span className="text-xs text-zinc-500 shrink-0">{timeAgo(post.generated_at)}</span>

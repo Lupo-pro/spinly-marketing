@@ -109,6 +109,19 @@ body {
    ?single=true is passed. */
 .slide.single-mode .footer-pages { display: none; }
 
+/* Phase 11: Story mode — vertical 9:16 format (1080×1920) instead of 4:5.
+   The viewport / screenshot clip in lib/instagram/renderer.ts also adapts to
+   1080×1920 when post.content_type === 'story'. Stories never paginate. */
+.slide.story {
+  width: 1080px;
+  height: 1920px;
+}
+.slide.story .footer-pages { display: none; }
+/* Body reset (defined earlier in this file) targets 1080×1350 — bump for stories. */
+body:has(.slide.story) {
+  height: 1920px;
+}
+
 /* === HOOK === */
 .hook .character {
   position: absolute;

@@ -10,7 +10,10 @@ const AXIS_BADGE_COLORS: Record<string, string> = {
   stat_bombe: 'bg-orange-500/15 text-orange-300 border-orange-500/30',
   visual_bg: 'bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/30',
   timeline: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30',
-  question: 'bg-pink-500/15 text-pink-300 border-pink-500/30'
+  question: 'bg-pink-500/15 text-pink-300 border-pink-500/30',
+  story_stat: 'bg-orange-500/15 text-orange-300 border-orange-500/30',
+  story_question: 'bg-pink-500/15 text-pink-300 border-pink-500/30',
+  story_teaser: 'bg-purple-500/15 text-purple-300 border-purple-500/30'
 }
 
 function renderTitle(text: string) {
@@ -176,6 +179,53 @@ export default function SlidePreview({ slide }: { slide: Slide }) {
           {slide.sub && (
             <p className="text-sm text-zinc-400 mt-3 whitespace-pre-line">{slide.sub}</p>
           )}
+        </div>
+      )}
+
+      {slide.type === 'story_stat' && (
+        <div>
+          <div className="text-4xl font-bold text-amber-300 mb-2">{slide.stat}</div>
+          <div className="text-sm font-semibold whitespace-pre-line mb-2">{slide.label}</div>
+          {slide.sub && <p className="text-xs text-zinc-500 mb-2">{slide.sub}</p>}
+          <div className="text-xs text-zinc-400 mt-3 px-2 py-1 rounded bg-orange-500/20 inline-block">
+            CTA: {slide.cta || 'audita gratis'} → {slide.ctaUrl || 'spinly.lat/audit'}
+          </div>
+        </div>
+      )}
+
+      {slide.type === 'story_question' && (
+        <div>
+          <div className="space-y-0.5 mb-3">
+            {slide.questionLines.split('|').map((line, i) => (
+              <div key={i} className="text-base font-semibold leading-tight">
+                {renderTitle(line)}
+              </div>
+            ))}
+          </div>
+          {slide.sub && (
+            <p className="text-sm text-zinc-400 mb-3 whitespace-pre-line">{slide.sub}</p>
+          )}
+          <div className="text-xs text-zinc-400 px-2 py-1 rounded bg-orange-500/20 inline-block">
+            CTA: {slide.cta || 'audita gratis'} → {slide.ctaUrl || 'spinly.lat/audit'}
+          </div>
+        </div>
+      )}
+
+      {slide.type === 'story_teaser' && (
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-purple-300 mb-2">
+            🏷 Nuevo post
+          </div>
+          <div className="space-y-0.5">
+            {slide.title.split('|').map((line, i) => (
+              <div key={i} className="text-base font-semibold leading-tight">
+                {renderTitle(line)}
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-zinc-500 mt-3">
+            ↓ {slide.teaserText || 'El post completo en mi feed.'}
+          </p>
         </div>
       )}
     </div>

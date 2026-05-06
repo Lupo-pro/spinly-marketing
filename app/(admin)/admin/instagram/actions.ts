@@ -170,18 +170,22 @@ export async function regeneratePost(postId: string) {
     thesis: angle.thesis
   })
 
-  // Phase 10: regenerate the same content_type as the existing post.
-  // Carousel posts get a new 10-slide carousel; single_post rows get a new
-  // 1-slide single (falling back to nothing if Haiku didn't produce one).
-  const isSinglePost = post.content_type === 'single_post'
-  const newSlides = isSinglePost
-    ? draft.single_post
-      ? [{ n: 1, ...draft.single_post }]
-      : null
-    : draft.carousel.slides
+  // Regenerate the same content_type as the existing post:
+  // - carousel    -> new 10-slide carousel from draft.carousel
+  // - single_post -> new 1-slide single from draft.single_post
+  // - story       -> new 1-slide story from draft.story
+  // If Haiku didn't produce the matching piece, surface a clear error.
+  let newSlides: unknown[] | null
+  if (post.content_type === 'single_post') {
+    newSlides = draft.single_post ? [{ n: 1, ...draft.single_post }] : null
+  } else if (post.content_type === 'story') {
+    newSlides = draft.story ? [{ n: 1, ...draft.story }] : null
+  } else {
+    newSlides = draft.carousel.slides
+  }
 
   if (!newSlides) {
-    throw new Error('Haiku did not produce a single_post for regeneration')
+    throw new Error(`Haiku did not produce a ${post.content_type} for regeneration`)
   }
 
   await supabase

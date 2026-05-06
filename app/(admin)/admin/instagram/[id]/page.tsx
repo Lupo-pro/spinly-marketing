@@ -49,15 +49,21 @@ export default async function PostValidationPage({ params }: { params: { id: str
   const statusClass = STATUS_COLOR[post.status] ?? STATUS_COLOR.draft
   const slideUrls = (post.slide_image_urls ?? []) as string[]
   const contentType = (post.content_type ?? 'carousel') as 'carousel' | 'single_post' | 'story'
-  const isSinglePost = contentType === 'single_post'
-  const expectedSlides = isSinglePost ? 1 : 10
+  const isCarousel = contentType === 'carousel'
+  const isStory = contentType === 'story'
+  // single_post and story are both 1-slide formats; carousel is 10.
+  const expectedSlides = isCarousel ? 10 : 1
   const hasRendered = slideUrls.length === expectedSlides
   const isReadyToPublish = post.status === 'approved' && hasRendered
 
-  const renderLabel = isSinglePost ? 'Visuel rendu' : 'Visuels rendus'
-  const previewLabel = isSinglePost ? '1 slide (texte)' : '10 slides (texte)'
-  const titleLabel = isSinglePost ? 'Validation post simple' : 'Validation carrousel'
-  const typeBadge = isSinglePost ? '📷 Post simple' : '🎴 Carrousel'
+  const renderLabel = isCarousel ? 'Visuels rendus' : 'Visuel rendu'
+  const previewLabel = isCarousel ? '10 slides (texte)' : '1 slide (texte)'
+  const titleLabel = isStory
+    ? 'Validation story'
+    : isCarousel
+      ? 'Validation carrousel'
+      : 'Validation post simple'
+  const typeBadge = isStory ? '📱 Story' : isCarousel ? '🎴 Carrousel' : '📷 Post simple'
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 p-8">
@@ -88,9 +94,11 @@ export default async function PostValidationPage({ params }: { params: { id: str
           <div className="mb-6 px-4 py-3 bg-gradient-to-r from-orange-500/10 to-pink-500/10 border border-orange-500/30 rounded-lg">
             <p className="text-orange-300 font-medium">
               ✨ Prêt à publier —{' '}
-              {isSinglePost
-                ? "télécharge le PNG, colle dans Buffer/Later, programme l'heure."
-                : "télécharge le ZIP, colle dans Buffer/Later, programme l'heure."}
+              {isCarousel
+                ? "télécharge le ZIP, colle dans Buffer/Later, programme l'heure."
+                : isStory
+                  ? "télécharge le PNG vertical et publie-le en story."
+                  : "télécharge le PNG, colle dans Buffer/Later, programme l'heure."}
             </p>
           </div>
         )}
@@ -117,7 +125,14 @@ export default async function PostValidationPage({ params }: { params: { id: str
             <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider mb-3">
               1. Télécharge le fichier
             </h3>
-            {isSinglePost ? (
+            {isCarousel ? (
+              <>
+                <DownloadZipButton postId={post.id} hasRendered={hasRendered} />
+                <p className="text-xs text-zinc-500 mt-2">
+                  Le ZIP contient : 10 PNG dans l&apos;ordre + caption.txt + README avec instructions.
+                </p>
+              </>
+            ) : (
               <>
                 <DownloadSinglePngButton
                   postId={post.id}
@@ -125,14 +140,9 @@ export default async function PostValidationPage({ params }: { params: { id: str
                   hasRendered={hasRendered}
                 />
                 <p className="text-xs text-zinc-500 mt-2">
-                  1 PNG portrait 1080×1350 prêt à uploader sur Instagram.
-                </p>
-              </>
-            ) : (
-              <>
-                <DownloadZipButton postId={post.id} hasRendered={hasRendered} />
-                <p className="text-xs text-zinc-500 mt-2">
-                  Le ZIP contient : 10 PNG dans l&apos;ordre + caption.txt + README avec instructions.
+                  {isStory
+                    ? '1 PNG vertical 1080×1920 prêt à publier en story Instagram.'
+                    : '1 PNG portrait 1080×1350 prêt à uploader sur Instagram.'}
                 </p>
               </>
             )}

@@ -1,0 +1,107 @@
+.slide.story-question {
+  position: relative;
+  overflow: hidden;
+}
+
+.slide.story-question .big-question {
+  position: absolute;
+  top: -100px;
+  right: -200px;
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 1500px;
+  line-height: 1;
+  background: var(--spinly-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  opacity: 0.85;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+}
+
+/* White brand override on this dark+bold layout */
+.slide.story-question .brand-top-right {
+  background: none;
+  -webkit-text-fill-color: var(--white);
+  color: var(--white);
+}
+
+.slide.story-question .sq-stack {
+  position: absolute;
+  top: 380px;
+  left: var(--safe-pad);
+  right: var(--safe-pad);
+  z-index: 5;
+}
+
+.slide.story-question .sq-line {
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 110px;
+  line-height: 1.05;
+  letter-spacing: -2px;
+  text-transform: uppercase;
+  color: var(--white);
+  margin-bottom: 6px;
+}
+
+.slide.story-question .sq-line .accent {
+  background: var(--spinly-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.slide.story-question .sq-sub {
+  position: absolute;
+  top: 1080px;
+  left: var(--safe-pad);
+  right: var(--safe-pad);
+  z-index: 5;
+  font-family: var(--font-manrope), sans-serif;
+  font-size: 38px;
+  font-weight: 500;
+  color: var(--gray-2);
+  line-height: 1.4;
+}
+
+.slide.story-question .sq-cta-block {
+  position: absolute;
+  bottom: 280px;
+  left: var(--safe-pad);
+  right: var(--safe-pad);
+  background: linear-gradient(95deg, #F59E2C 0%, #FF4500 100%);
+  border-radius: 32px;
+  padding: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 6;
+}
+
+.slide.story-question .sq-cta-text-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.slide.story-question .sq-cta-text {
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 44px;
+  line-height: 1;
+  letter-spacing: -1px;
+  text-transform: uppercase;
+  color: var(--white);
+  margin-bottom: 8px;
+}
+
+.slide.story-question .sq-cta-url {
+  font-family: var(--font-manrope), sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--white);
+  opacity: 0.9;
+}
+
+.slide.story-question .sq-cta-arrow {
+  flex-shrink: 0;
+}
