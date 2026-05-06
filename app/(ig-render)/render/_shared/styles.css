@@ -125,7 +125,7 @@ body {
   -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
   mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
 }
-.hook .character.placeholder::before { content: '[ Personnage IA ]'; }
+.hook .character.placeholder { display: none; }
 .hook .character-glow {
   position: absolute;
   right: 100px;
@@ -138,8 +138,8 @@ body {
 .hook .title {
   position: absolute;
   left: var(--safe-pad);
+  right: var(--safe-pad);
   bottom: 320px;
-  width: 850px;
   font-family: var(--font-archivo), sans-serif;
   font-size: 130px;
   line-height: 0.95;
@@ -159,8 +159,8 @@ body {
 .hook .subtitle {
   position: absolute;
   left: var(--safe-pad);
+  right: var(--safe-pad);
   bottom: 200px;
-  width: 700px;
   font-family: var(--font-manrope), sans-serif;
   font-weight: 400;
   font-size: 32px;
@@ -258,7 +258,7 @@ body {
   mask-image: linear-gradient(to bottom, black 65%, transparent 100%);
   z-index: 2;
 }
-.senal .character.placeholder::before { content: '[ Perso IA ]'; }
+.senal .character.placeholder { display: none; }
 .senal .label-senal {
   position: absolute;
   top: var(--safe-pad);
@@ -278,7 +278,7 @@ body {
   position: absolute;
   top: 240px;
   left: var(--safe-pad);
-  width: 700px;
+  width: 850px;
   font-family: var(--font-archivo), sans-serif;
   font-size: 86px;
   line-height: 0.95;
@@ -291,7 +291,7 @@ body {
   position: absolute;
   top: 600px;
   left: var(--safe-pad);
-  width: 600px;
+  width: 800px;
   font-family: var(--font-manrope), sans-serif;
   font-weight: 500;
   font-size: 32px;
@@ -485,7 +485,7 @@ body {
   -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
   mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
 }
-.cierre .character.placeholder::before { content: '[ Perso IA + bureau ]'; }
+.cierre .character.placeholder { display: none; }
 .cierre .character-glow {
   position: absolute;
   right: 100px;
@@ -514,7 +514,7 @@ body {
   position: absolute;
   top: 240px;
   left: var(--safe-pad);
-  width: 720px;
+  right: var(--safe-pad);
   font-family: var(--font-archivo), sans-serif;
   font-size: 78px;
   line-height: 0.98;
@@ -527,7 +527,7 @@ body {
   position: absolute;
   top: 580px;
   left: var(--safe-pad);
-  width: 600px;
+  right: var(--safe-pad);
   font-family: var(--font-manrope), sans-serif;
   font-weight: 500;
   font-size: 30px;

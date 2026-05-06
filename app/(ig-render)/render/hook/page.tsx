@@ -17,13 +17,12 @@ export default function HookPage({ searchParams }: Props) {
     character = ''
   } = searchParams
 
-  const charClass = character ? 'character' : 'character placeholder'
   const charStyle = character ? { backgroundImage: `url(${character})` } : undefined
 
   return (
     <div className="slide hook">
-      <div className="character-glow" />
-      <div className={charClass} style={charStyle} />
+      {character && <div className="character-glow" />}
+      {character && <div className="character" style={charStyle} />}
       <div className="label-top">HOOK</div>
       <div className="brand-top-right">SPINLY</div>
       <div className="title">

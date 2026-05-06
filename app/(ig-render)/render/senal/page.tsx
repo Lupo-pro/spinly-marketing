@@ -23,13 +23,12 @@ export default function SenalPage({ searchParams }: Props) {
 
   const effectivePageNum = pageNum ?? String(parseInt(number) + 2).padStart(2, '0')
 
-  const charClass = character ? 'character' : 'character placeholder'
   const charStyle = character ? { backgroundImage: `url(${character})` } : undefined
 
   return (
     <div className="slide senal">
       <div className="big-number">{number}</div>
-      <div className={charClass} style={charStyle} />
+      {character && <div className="character" style={charStyle} />}
       <div className="label-senal">· SEÑAL {number}</div>
       <div className="brand-top-right">SPINLY</div>
       <div className="title" dangerouslySetInnerHTML={{ __html: title }} />
