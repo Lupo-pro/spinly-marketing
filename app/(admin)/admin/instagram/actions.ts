@@ -95,6 +95,64 @@ export async function schedulePostAction(postId: string) {
   }
 }
 
+export async function markAsPublishedAction(postId: string, igPermalink?: string) {
+  const supabase = getServerSupabase()
+  const user = await getCurrentUser()
+
+  const { error } = await supabase
+    .from('ig_posts')
+    .update({
+      status: 'published',
+      published_at: new Date().toISOString(),
+      ig_permalink: igPermalink || null,
+      // Tag the manual path so we can distinguish from auto-publish later if Meta API is revived.
+      approved_by: user?.email ? `${user.email} (manual)` : 'manual'
+    })
+    .eq('id', postId)
+
+  if (error) {
+    return { ok: false as const, error: error.message }
+  }
+
+  const { data: account } = await supabase
+    .from('ig_account')
+    .select('id, posts_published_count')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (account) {
+    await supabase
+      .from('ig_account')
+      .update({ posts_published_count: (account.posts_published_count || 0) + 1 })
+      .eq('id', account.id)
+  }
+
+  revalidatePath(`/admin/instagram/${postId}`)
+  revalidatePath('/admin/instagram')
+  return { ok: true as const }
+}
+
+export async function unmarkAsPublishedAction(postId: string) {
+  const supabase = getServerSupabase()
+  const { error } = await supabase
+    .from('ig_posts')
+    .update({
+      status: 'approved',
+      published_at: null,
+      ig_permalink: null
+    })
+    .eq('id', postId)
+
+  if (error) {
+    return { ok: false as const, error: error.message }
+  }
+
+  revalidatePath(`/admin/instagram/${postId}`)
+  revalidatePath('/admin/instagram')
+  return { ok: true as const }
+}
+
 export async function regeneratePost(postId: string) {
   const supabase = getServerSupabase()
   const { data: post } = await supabase

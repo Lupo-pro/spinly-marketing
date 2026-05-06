@@ -5,7 +5,9 @@ import type { Slide } from '@/lib/instagram/generator'
 import SlidePreview from '../_components/SlidePreview'
 import RenderButton from '../_components/RenderButton'
 import SlidesGrid from '../_components/SlidesGrid'
-import ScheduleButton from '../_components/ScheduleButton'
+import DownloadZipButton from '../_components/DownloadZipButton'
+import CaptionBlock from '../_components/CaptionBlock'
+import MarkPublishedButton from '../_components/MarkPublishedButton'
 import PostActions from './_components/PostActions'
 import { updatePostContent } from '../actions'
 
@@ -40,10 +42,13 @@ export default async function PostValidationPage({ params }: { params: { id: str
   if (!post) notFound()
 
   const slides = (post.slides_json ?? []) as Slide[]
-  const hashtagsString = (post.hashtags ?? []).join(' ')
+  const hashtags = (post.hashtags ?? []) as string[]
+  const hashtagsString = hashtags.join(' ')
   const angle = Array.isArray(post.ig_angles) ? post.ig_angles[0] : post.ig_angles
   const statusClass = STATUS_COLOR[post.status] ?? STATUS_COLOR.draft
   const slideUrls = (post.slide_image_urls ?? []) as string[]
+  const hasRendered = slideUrls.length === 10
+  const isReadyToPublish = post.status === 'approved' && hasRendered
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 p-8">
@@ -67,6 +72,14 @@ export default async function PostValidationPage({ params }: { params: { id: str
           </div>
         </header>
 
+        {isReadyToPublish && (
+          <div className="mb-6 px-4 py-3 bg-gradient-to-r from-orange-500/10 to-pink-500/10 border border-orange-500/30 rounded-lg">
+            <p className="text-orange-300 font-medium">
+              ✨ Prêt à publier — télécharge le ZIP, colle dans Buffer/Later, programme l&apos;heure.
+            </p>
+          </div>
+        )}
+
         <PostActions postId={post.id} status={post.status} />
 
         <section className="mt-8 mb-10">
@@ -79,36 +92,43 @@ export default async function PostValidationPage({ params }: { params: { id: str
           <SlidesGrid urls={slideUrls} />
         </section>
 
-        <section className="mb-10 bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400 mb-4">
-            Publication
-          </h2>
-          {post.ig_permalink && (
-            <div className="mb-4 text-sm">
-              <a
-                href={post.ig_permalink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-violet-300 hover:text-violet-200 underline"
-              >
-                Voir sur Instagram ↗
-              </a>
-            </div>
-          )}
-          <ScheduleButton
-            postId={post.id}
-            status={post.status}
-            hasRendered={slideUrls.length === 10}
-            scheduledFor={post.scheduled_for}
-          />
-          {post.last_publish_error && (
-            <p className="text-xs text-rose-400 mt-3">
-              Dernière erreur de publication : {post.last_publish_error}
+        <section className="mt-12 space-y-8">
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold">Publication manuelle</h2>
+            <span className="text-xs text-zinc-500">via Buffer / Later / app IG</span>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider mb-3">
+              1. Télécharge les fichiers
+            </h3>
+            <DownloadZipButton postId={post.id} hasRendered={hasRendered} />
+            <p className="text-xs text-zinc-500 mt-2">
+              Le ZIP contient : 10 PNG dans l&apos;ordre + caption.txt + README avec instructions.
             </p>
-          )}
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider mb-3">
+              2. Copie le caption
+            </h3>
+            <CaptionBlock caption={post.caption} hashtags={hashtags} />
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider mb-3">
+              3. Une fois publié sur Instagram
+            </h3>
+            <MarkPublishedButton
+              postId={post.id}
+              status={post.status}
+              igPermalink={post.ig_permalink}
+              hasRendered={hasRendered}
+            />
+          </div>
         </section>
 
-        <section className="mb-10">
+        <section className="mt-12 mb-10">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400 mb-4">
             10 slides (texte)
           </h2>
@@ -145,7 +165,7 @@ function PostEditForm({
   return (
     <section className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400 mb-4">
-        Caption + Hashtags
+        Caption + Hashtags (édition)
       </h2>
       <form action={update} className="space-y-4">
         <div>

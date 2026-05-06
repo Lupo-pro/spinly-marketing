@@ -15,8 +15,13 @@ export default async function InstagramKanban() {
   const supabase = getServerSupabase()
   const { data } = await supabase
     .from('ig_posts')
-    .select('id, status, slides_json, generated_at, ig_angles(axis)')
-    .in('status', COLUMNS.map((c) => c.status))
+    .select(
+      'id, status, slides_json, generated_at, slide_image_urls, published_at, ig_permalink, ig_angles(axis)'
+    )
+    .in(
+      'status',
+      COLUMNS.map((c) => c.status)
+    )
     .order('generated_at', { ascending: false })
 
   const posts = (data ?? []) as unknown as (PostCardData & { status: string })[]

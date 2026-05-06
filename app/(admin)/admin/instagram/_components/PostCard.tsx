@@ -30,10 +30,18 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diffSec / 86400)}j`
 }
 
+function shortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+}
+
 export type PostCardData = {
   id: string
   slides_json: Slide[]
   generated_at: string
+  status?: string
+  slide_image_urls?: string[] | null
+  published_at?: string | null
+  ig_permalink?: string | null
   ig_angles: { axis: string } | null
 }
 
@@ -43,13 +51,18 @@ export default function PostCard({ post }: { post: PostCardData }) {
   const axis = post.ig_angles?.axis
   const badgeClass = axis ? AXIS_COLORS[axis] : 'bg-zinc-800 text-zinc-400 border-zinc-700'
 
+  const hasRendered = (post.slide_image_urls?.length ?? 0) === 10
+  const isReady = post.status === 'approved' && hasRendered
+
   return (
     <Link
       href={`/admin/instagram/${post.id}`}
       className="block bg-zinc-900 border border-zinc-800 rounded-lg p-4 hover:border-zinc-600 transition"
     >
       <div className="flex items-start justify-between gap-2 mb-3">
-        <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border ${badgeClass}`}>
+        <span
+          className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border ${badgeClass}`}
+        >
           {axis ? AXIS_LABELS[axis] ?? axis : 'no axis'}
         </span>
         <span className="text-xs text-zinc-500 shrink-0">{timeAgo(post.generated_at)}</span>
@@ -57,6 +70,30 @@ export default function PostCard({ post }: { post: PostCardData }) {
       <p className="text-sm font-medium leading-snug">
         {hook.replace(/\*([^*]+)\*/g, '$1')}
       </p>
+
+      <div className="flex items-center gap-2 mt-3 flex-wrap">
+        {isReady && (
+          <span className="text-[10px] px-2 py-0.5 rounded bg-orange-500/15 text-orange-300 border border-orange-500/30">
+            📦 Prêt
+          </span>
+        )}
+        {post.status === 'published' && post.published_at && (
+          <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+            📅 Publié {shortDate(post.published_at)}
+          </span>
+        )}
+        {post.status === 'published' && post.ig_permalink && (
+          <a
+            href={post.ig_permalink}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-[10px] text-zinc-400 hover:text-zinc-200 underline"
+          >
+            voir sur IG ↗
+          </a>
+        )}
+      </div>
     </Link>
   )
 }
