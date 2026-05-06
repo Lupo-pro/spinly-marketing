@@ -5,6 +5,7 @@ import type { Slide } from '@/lib/instagram/generator'
 import SlidePreview from '../_components/SlidePreview'
 import RenderButton from '../_components/RenderButton'
 import SlidesGrid from '../_components/SlidesGrid'
+import ScheduleButton from '../_components/ScheduleButton'
 import PostActions from './_components/PostActions'
 import { updatePostContent } from '../actions'
 
@@ -76,6 +77,35 @@ export default async function PostValidationPage({ params }: { params: { id: str
             <RenderButton postId={post.id} hasUrls={slideUrls.length > 0} />
           </div>
           <SlidesGrid urls={slideUrls} />
+        </section>
+
+        <section className="mb-10 bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400 mb-4">
+            Publication
+          </h2>
+          {post.ig_permalink && (
+            <div className="mb-4 text-sm">
+              <a
+                href={post.ig_permalink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-violet-300 hover:text-violet-200 underline"
+              >
+                Voir sur Instagram ↗
+              </a>
+            </div>
+          )}
+          <ScheduleButton
+            postId={post.id}
+            status={post.status}
+            hasRendered={slideUrls.length === 10}
+            scheduledFor={post.scheduled_for}
+          />
+          {post.last_publish_error && (
+            <p className="text-xs text-rose-400 mt-3">
+              Dernière erreur de publication : {post.last_publish_error}
+            </p>
+          )}
         </section>
 
         <section className="mb-10">

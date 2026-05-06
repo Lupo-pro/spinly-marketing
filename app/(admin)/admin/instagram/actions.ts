@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getServerSupabase } from '@/lib/supabase/server'
 import { generateCarousel } from '@/lib/instagram/generator'
+import { schedulePost } from '@/lib/instagram/scheduler'
 import { getCurrentUser } from '@/lib/supabase/server-auth'
 
 export async function approvePost(postId: string) {
@@ -63,6 +64,34 @@ export async function renderPostAction(postId: string) {
     total: number
     urls: string[]
     errors: { slideN: number; error: string }[]
+  }
+}
+
+export async function schedulePostAction(postId: string) {
+  const supabase = getServerSupabase()
+  const { data: post } = await supabase
+    .from('ig_posts')
+    .select('slide_image_urls, status')
+    .eq('id', postId)
+    .single()
+
+  if (!post) {
+    return { ok: false, error: 'Post not found' } as const
+  }
+  if (post.status !== 'approved') {
+    return { ok: false, error: 'Post must be approved before scheduling' } as const
+  }
+  if (!post.slide_image_urls || post.slide_image_urls.length !== 10) {
+    return { ok: false, error: 'Slides must be rendered before scheduling' } as const
+  }
+
+  const result = await schedulePost(postId)
+  revalidatePath(`/admin/instagram/${postId}`)
+  revalidatePath('/admin/instagram')
+  if (!result.ok) return result
+  return {
+    ok: true as const,
+    scheduledFor: result.scheduledFor ? result.scheduledFor.toISOString() : null
   }
 }
 
