@@ -3,6 +3,8 @@ import { getServerSupabase } from '@/lib/supabase/server'
 import PostCard, { type PostCardData } from './_components/PostCard'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const fetchCache = 'force-no-store'
 
 const COLUMNS: { status: string; label: string }[] = [
   { status: 'draft', label: 'Drafts' },

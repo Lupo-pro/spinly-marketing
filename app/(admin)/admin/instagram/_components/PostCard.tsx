@@ -3,6 +3,22 @@
 import Link from 'next/link'
 import type { Slide } from '@/lib/instagram/generator'
 
+// Defensive: slide_image_urls is meant to be string[], but Supabase JSONB has
+// surprised before (string-encoded JSON, null, etc). Accept the 3 shapes.
+function getSlidesCount(urls: unknown): number {
+  if (!urls) return 0
+  if (Array.isArray(urls)) return urls.length
+  if (typeof urls === 'string') {
+    try {
+      const parsed = JSON.parse(urls)
+      return Array.isArray(parsed) ? parsed.length : 0
+    } catch {
+      return 0
+    }
+  }
+  return 0
+}
+
 const AXIS_LABELS: Record<string, string> = {
   anti_agencias: 'Anti-agencias',
   google_algo: 'Google algo',
@@ -53,8 +69,17 @@ export default function PostCard({ post }: { post: PostCardData }) {
   const axis = post.ig_angles?.axis
   const badgeClass = axis ? AXIS_COLORS[axis] : 'bg-zinc-800 text-zinc-400 border-zinc-700'
 
-  const hasRendered = (post.slide_image_urls?.length ?? 0) === 10
-  const isReady = post.status === 'approved' && hasRendered
+  const slidesCount = getSlidesCount(post.slide_image_urls)
+  const hasRendered = slidesCount === 10
+  const isApproved = post.status?.toLowerCase().trim() === 'approved'
+  const isReady = isApproved && hasRendered
+
+  if (process.env.NODE_ENV === 'development') {
+    // Surfaces in browser console — easy to spot mismatches between DB state and UI.
+    console.log(
+      `[PostCard] ${post.id.slice(0, 8)} status=${post.status} slides=${slidesCount} ready=${isReady}`
+    )
+  }
 
   return (
     <Link
