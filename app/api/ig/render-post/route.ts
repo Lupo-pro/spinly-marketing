@@ -54,6 +54,9 @@ export async function POST(req: Request) {
       urls.push(publicUrl.publicUrl)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
+      console.error(
+        `[render-error] postId=${postId} slideIndex=${slide.n} template=${slide.type} error=${message}`
+      )
       errors.push({ slideN: slide.n, error: message })
     }
   }
