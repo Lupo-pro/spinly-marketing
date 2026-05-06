@@ -6,6 +6,7 @@ type Props = {
     label?: string
     sub?: string
     pageNum?: string
+    single?: string
   }
 }
 
@@ -14,13 +15,15 @@ export default function StatBombePage({ searchParams }: Props) {
     stat = 'x6',
     label = 'MÁS RESEÑAS\nEN GOOGLE MAPS',
     sub = 'vs cafés sin Spinly',
-    pageNum = '09'
+    pageNum = '09',
+    single
   } = searchParams
 
+  const isSingle = single === 'true'
   const labelLines = label.split('\n').slice(0, 2)
 
   return (
-    <div className="slide stat-bombe">
+    <div className={`slide stat-bombe${isSingle ? ' single-mode' : ''}`}>
       <div className="brand-top-right">SPINLY</div>
 
       <div className="sb-stack">

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/supabase/server'
-import { generateCarousel, selectAnglesForGeneration } from '@/lib/instagram/generator'
+import { generateDraft, selectAnglesForGeneration } from '@/lib/instagram/generator'
 import { sendTelegramMessage, TG_EMOJIS } from '@/lib/telegram'
 
 export const maxDuration = 300
@@ -41,27 +41,57 @@ export async function GET(req: Request) {
   }
 
   type Result =
-    | { ok: true; postId: string; hook: string }
+    | { ok: true; carouselId: string; singlePostId: string | null; hook: string }
     | { ok: false; angleId: string; error: string }
 
   const results: Result[] = []
+  let totalSinglePosts = 0
   for (const angle of angles) {
     try {
-      const carousel = await generateCarousel(angle)
+      const draft = await generateDraft(angle)
 
-      const { data: post, error } = await supabase
+      // 1. Insert the carousel (always present after validation passed).
+      const { data: carouselPost, error: carouselErr } = await supabase
         .from('ig_posts')
         .insert({
           angle_id: angle.id,
           status: 'draft',
-          slides_json: carousel.slides,
-          caption: carousel.caption,
-          hashtags: carousel.hashtags
+          content_type: 'carousel',
+          slides_json: draft.carousel.slides,
+          caption: draft.caption,
+          hashtags: draft.hashtags
         })
         .select()
         .single()
 
-      if (error) throw error
+      if (carouselErr) throw carouselErr
+
+      // 2. Insert the single_post if Haiku produced a valid one.
+      // The slide is wrapped { n: 1, ...singlePostSlide } so the renderer's
+      // pageNum logic works the same way as for carousels.
+      let singlePostId: string | null = null
+      if (draft.single_post) {
+        const singleSlide = { n: 1, ...draft.single_post }
+        const { data: singlePost, error: singleErr } = await supabase
+          .from('ig_posts')
+          .insert({
+            angle_id: angle.id,
+            status: 'draft',
+            content_type: 'single_post',
+            slides_json: [singleSlide],
+            caption: draft.caption,
+            hashtags: draft.hashtags
+          })
+          .select()
+          .single()
+
+        if (singleErr) {
+          console.warn(`[ig-generate] single_post insert failed for angle ${angle.id}: ${singleErr.message}`)
+        } else {
+          singlePostId = singlePost.id
+          totalSinglePosts++
+        }
+      }
 
       await supabase
         .from('ig_angles')
@@ -71,9 +101,9 @@ export async function GET(req: Request) {
         })
         .eq('id', angle.id)
 
-      const firstSlide = carousel.slides[0]
+      const firstSlide = draft.carousel.slides[0]
       const hookText = firstSlide.type === 'hook' ? firstSlide.title : ''
-      results.push({ ok: true, postId: post.id, hook: hookText })
+      results.push({ ok: true, carouselId: carouselPost.id, singlePostId, hook: hookText })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       results.push({ ok: false, angleId: angle.id, error: message })
@@ -85,10 +115,15 @@ export async function GET(req: Request) {
 
   try {
     await sendTelegramMessage(
-      `${TG_EMOJIS.spin} IG generator: ${successCount}/${angles.length} carrousels générés.\n` +
+      `${TG_EMOJIS.spin} IG generator: ${successCount}/${angles.length} carrousels + ${totalSinglePosts} posts simples générés.\n` +
         `Valide sur ${appUrl}/admin/instagram`
     )
   } catch {}
 
-  return NextResponse.json({ generated: successCount, total: angles.length, results })
+  return NextResponse.json({
+    generated: successCount,
+    singlePosts: totalSinglePosts,
+    total: angles.length,
+    results
+  })
 }

@@ -60,6 +60,7 @@ export async function POST(req: Request) {
   }
 
   const slides = (post.slides_json ?? []) as Slide[]
+  const contentType = (post.content_type ?? 'carousel') as 'carousel' | 'single_post' | 'story'
 
   const startedAt = Date.now()
 
@@ -68,7 +69,7 @@ export async function POST(req: Request) {
     RENDER_CONCURRENCY,
     async (slide) => {
       try {
-        const templateUrl = slideToTemplateUrl(slide)
+        const templateUrl = slideToTemplateUrl(slide, contentType)
         const png = await renderSlideToPng(templateUrl)
 
         const filename = `${postId}/slide-${String(slide.n).padStart(2, '0')}.png`

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getServerSupabase } from '@/lib/supabase/server'
-import { generateCarousel } from '@/lib/instagram/generator'
+import { generateDraft } from '@/lib/instagram/generator'
 import { schedulePost } from '@/lib/instagram/scheduler'
 import { getCurrentUser } from '@/lib/supabase/server-auth'
 
@@ -164,19 +164,36 @@ export async function regeneratePost(postId: string) {
   if (!post || !post.ig_angles) throw new Error('Post or angle not found')
 
   const angle = Array.isArray(post.ig_angles) ? post.ig_angles[0] : post.ig_angles
-  const carousel = await generateCarousel({
+  const draft = await generateDraft({
     axis: angle.axis,
     hook: angle.hook,
     thesis: angle.thesis
   })
 
+  // Phase 10: regenerate the same content_type as the existing post.
+  // Carousel posts get a new 10-slide carousel; single_post rows get a new
+  // 1-slide single (falling back to nothing if Haiku didn't produce one).
+  const isSinglePost = post.content_type === 'single_post'
+  const newSlides = isSinglePost
+    ? draft.single_post
+      ? [{ n: 1, ...draft.single_post }]
+      : null
+    : draft.carousel.slides
+
+  if (!newSlides) {
+    throw new Error('Haiku did not produce a single_post for regeneration')
+  }
+
   await supabase
     .from('ig_posts')
     .update({
-      slides_json: carousel.slides,
-      caption: carousel.caption,
-      hashtags: carousel.hashtags,
-      generated_at: new Date().toISOString()
+      slides_json: newSlides,
+      caption: draft.caption,
+      hashtags: draft.hashtags,
+      generated_at: new Date().toISOString(),
+      // Re-rendering wipes any previously rendered PNGs so the dashboard
+      // shows "needs render" again.
+      slide_image_urls: []
     })
     .eq('id', postId)
 

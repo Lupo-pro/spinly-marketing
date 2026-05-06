@@ -13,12 +13,16 @@ const COLUMNS: { status: string; label: string }[] = [
   { status: 'published', label: 'Published' }
 ]
 
-export default async function InstagramKanban() {
+export default async function InstagramKanban({
+  searchParams
+}: {
+  searchParams: { filter?: string }
+}) {
   const supabase = getServerSupabase()
   const { data } = await supabase
     .from('ig_posts')
     .select(
-      'id, status, slides_json, generated_at, slide_image_urls, published_at, ig_permalink, ig_angles(axis)'
+      'id, status, content_type, slides_json, generated_at, slide_image_urls, published_at, ig_permalink, ig_angles(axis)'
     )
     .in(
       'status',
@@ -26,7 +30,14 @@ export default async function InstagramKanban() {
     )
     .order('generated_at', { ascending: false })
 
-  const posts = (data ?? []) as unknown as (PostCardData & { status: string })[]
+  const allPosts = (data ?? []) as unknown as (PostCardData & { status: string })[]
+
+  // Phase 10: optional URL filter ?filter=carousel | single_post
+  const filter = searchParams.filter
+  const posts =
+    filter === 'carousel' || filter === 'single_post'
+      ? allPosts.filter((p) => (p.content_type ?? 'carousel') === filter)
+      : allPosts
 
   const byStatus: Record<string, (PostCardData & { status: string })[]> = {}
   for (const c of COLUMNS) byStatus[c.status] = []
@@ -52,6 +63,31 @@ export default async function InstagramKanban() {
             Compte & monitoring →
           </Link>
         </header>
+
+        <nav className="mb-6 flex gap-2 text-sm">
+          {[
+            { key: 'all', label: 'Tous', value: '' },
+            { key: 'carousel', label: '🎴 Carrousels', value: 'carousel' },
+            { key: 'single_post', label: '📷 Posts simples', value: 'single_post' }
+          ].map((tab) => {
+            const active =
+              tab.value === '' ? !filter : filter === tab.value
+            const href = tab.value === '' ? '/admin/instagram' : `/admin/instagram?filter=${tab.value}`
+            return (
+              <Link
+                key={tab.key}
+                href={href}
+                className={`px-3 py-1.5 rounded-lg border transition ${
+                  active
+                    ? 'bg-zinc-100 text-zinc-950 border-zinc-100'
+                    : 'bg-transparent text-zinc-400 border-zinc-800 hover:border-zinc-600 hover:text-zinc-100'
+                }`}
+              >
+                {tab.label}
+              </Link>
+            )
+          })}
+        </nav>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {COLUMNS.map((col) => (

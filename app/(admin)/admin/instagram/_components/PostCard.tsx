@@ -57,6 +57,7 @@ export type PostCardData = {
   slides_json: Slide[]
   generated_at: string
   status?: string
+  content_type?: 'carousel' | 'single_post' | 'story' | null
   slide_image_urls?: string[] | null
   published_at?: string | null
   ig_permalink?: string | null
@@ -70,14 +71,16 @@ export default function PostCard({ post }: { post: PostCardData }) {
   const badgeClass = axis ? AXIS_COLORS[axis] : 'bg-zinc-800 text-zinc-400 border-zinc-700'
 
   const slidesCount = getSlidesCount(post.slide_image_urls)
-  const hasRendered = slidesCount === 10
+  const contentType = post.content_type ?? 'carousel'
+  // Phase 10: a carousel is ready when 10 PNGs are rendered; a single_post needs 1.
+  const expectedSlides = contentType === 'single_post' ? 1 : 10
+  const hasRendered = slidesCount === expectedSlides
   const isApproved = post.status?.toLowerCase().trim() === 'approved'
   const isReady = isApproved && hasRendered
 
   if (process.env.NODE_ENV === 'development') {
-    // Surfaces in browser console — easy to spot mismatches between DB state and UI.
     console.log(
-      `[PostCard] ${post.id.slice(0, 8)} status=${post.status} slides=${slidesCount} ready=${isReady}`
+      `[PostCard] ${post.id.slice(0, 8)} type=${contentType} status=${post.status} slides=${slidesCount}/${expectedSlides} ready=${isReady}`
     )
   }
 
@@ -87,11 +90,16 @@ export default function PostCard({ post }: { post: PostCardData }) {
       className="block bg-zinc-900 border border-zinc-800 rounded-lg p-4 hover:border-zinc-600 transition"
     >
       <div className="flex items-start justify-between gap-2 mb-3">
-        <span
-          className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border ${badgeClass}`}
-        >
-          {axis ? AXIS_LABELS[axis] ?? axis : 'no axis'}
-        </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span
+            className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border ${badgeClass}`}
+          >
+            {axis ? AXIS_LABELS[axis] ?? axis : 'no axis'}
+          </span>
+          <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+            {contentType === 'single_post' ? '📷 Post' : '🎴 Carrousel'}
+          </span>
+        </div>
         <span className="text-xs text-zinc-500 shrink-0">{timeAgo(post.generated_at)}</span>
       </div>
       <p className="text-sm font-medium leading-snug">

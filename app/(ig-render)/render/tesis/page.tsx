@@ -9,6 +9,7 @@ type Props = {
     subtitleStrong?: string
     watermark?: string
     pageNum?: string
+    single?: string
   }
 }
 
@@ -22,11 +23,14 @@ export default function TesisPage({ searchParams }: Props) {
     subtitleStrong = 'Los reportes pueden verse bien mientras tu dinero desaparece.',
     subtitle = 'Estas son las 5 señales que debes conocer.',
     watermark = 'AGENCIA',
-    pageNum = '02'
+    pageNum = '02',
+    single
   } = searchParams
 
+  const isSingle = single === 'true'
+
   return (
-    <div className="slide tesis">
+    <div className={`slide tesis${isSingle ? ' single-mode' : ''}`}>
       <div className="watermark">{watermark}</div>
       <div className="brand-top-right">SPINLY</div>
       <div className="content">

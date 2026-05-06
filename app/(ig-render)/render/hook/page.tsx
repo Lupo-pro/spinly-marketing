@@ -5,6 +5,7 @@ type Props = {
     subtitle?: string
     pageNum?: string
     character?: string
+    single?: string
   }
 }
 
@@ -14,13 +15,15 @@ export default function HookPage({ searchParams }: Props) {
     titleAccent = 'ESTAFANDO',
     subtitle = 'No siempre es fácil darse cuenta. Pero estas señales no mienten.',
     pageNum = '01',
-    character = ''
+    character = '',
+    single
   } = searchParams
 
+  const isSingle = single === 'true'
   const charStyle = character ? { backgroundImage: `url(${character})` } : undefined
 
   return (
-    <div className="slide hook">
+    <div className={`slide hook${isSingle ? ' single-mode' : ''}`}>
       {character && <div className="character-glow" />}
       {character && <div className="character" style={charStyle} />}
       <div className="brand-top-right">SPINLY</div>

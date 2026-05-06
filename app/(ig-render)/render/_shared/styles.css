@@ -104,6 +104,11 @@ body {
 }
 .footer-pages strong { color: var(--white); font-weight: 700; }
 
+/* Phase 10: single_post mode — no carousel pagination ("X / 10").
+   The @spinly.lat handle stays. Class is added by the template page when
+   ?single=true is passed. */
+.slide.single-mode .footer-pages { display: none; }
+
 /* === HOOK === */
 .hook .character {
   position: absolute;

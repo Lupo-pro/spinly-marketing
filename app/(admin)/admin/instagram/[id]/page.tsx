@@ -6,6 +6,7 @@ import SlidePreview from '../_components/SlidePreview'
 import RenderButton from '../_components/RenderButton'
 import SlidesGrid from '../_components/SlidesGrid'
 import DownloadZipButton from '../_components/DownloadZipButton'
+import DownloadSinglePngButton from '../_components/DownloadSinglePngButton'
 import CaptionBlock from '../_components/CaptionBlock'
 import MarkPublishedButton from '../_components/MarkPublishedButton'
 import PostActions from './_components/PostActions'
@@ -47,8 +48,16 @@ export default async function PostValidationPage({ params }: { params: { id: str
   const angle = Array.isArray(post.ig_angles) ? post.ig_angles[0] : post.ig_angles
   const statusClass = STATUS_COLOR[post.status] ?? STATUS_COLOR.draft
   const slideUrls = (post.slide_image_urls ?? []) as string[]
-  const hasRendered = slideUrls.length === 10
+  const contentType = (post.content_type ?? 'carousel') as 'carousel' | 'single_post' | 'story'
+  const isSinglePost = contentType === 'single_post'
+  const expectedSlides = isSinglePost ? 1 : 10
+  const hasRendered = slideUrls.length === expectedSlides
   const isReadyToPublish = post.status === 'approved' && hasRendered
+
+  const renderLabel = isSinglePost ? 'Visuel rendu' : 'Visuels rendus'
+  const previewLabel = isSinglePost ? '1 slide (texte)' : '10 slides (texte)'
+  const titleLabel = isSinglePost ? 'Validation post simple' : 'Validation carrousel'
+  const typeBadge = isSinglePost ? '📷 Post simple' : '🎴 Carrousel'
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 p-8">
@@ -58,10 +67,13 @@ export default async function PostValidationPage({ params }: { params: { id: str
             <Link href="/admin/instagram" className="text-sm text-zinc-500 hover:text-zinc-300">
               ← Instagram
             </Link>
-            <div className="flex items-center gap-3 mt-2">
-              <h1 className="text-2xl font-bold">Validation carrousel</h1>
+            <div className="flex items-center gap-3 mt-2 flex-wrap">
+              <h1 className="text-2xl font-bold">{titleLabel}</h1>
               <span className={`text-xs px-2 py-1 rounded border ${statusClass}`}>
                 {STATUS_LABEL[post.status] ?? post.status}
+              </span>
+              <span className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                {typeBadge}
               </span>
             </div>
             {angle && (
@@ -75,7 +87,10 @@ export default async function PostValidationPage({ params }: { params: { id: str
         {isReadyToPublish && (
           <div className="mb-6 px-4 py-3 bg-gradient-to-r from-orange-500/10 to-pink-500/10 border border-orange-500/30 rounded-lg">
             <p className="text-orange-300 font-medium">
-              ✨ Prêt à publier — télécharge le ZIP, colle dans Buffer/Later, programme l&apos;heure.
+              ✨ Prêt à publier —{' '}
+              {isSinglePost
+                ? "télécharge le PNG, colle dans Buffer/Later, programme l'heure."
+                : "télécharge le ZIP, colle dans Buffer/Later, programme l'heure."}
             </p>
           </div>
         )}
@@ -85,7 +100,7 @@ export default async function PostValidationPage({ params }: { params: { id: str
         <section className="mt-8 mb-10">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
-              Visuels rendus
+              {renderLabel}
             </h2>
             <RenderButton postId={post.id} hasUrls={slideUrls.length > 0} />
           </div>
@@ -100,12 +115,27 @@ export default async function PostValidationPage({ params }: { params: { id: str
 
           <div>
             <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider mb-3">
-              1. Télécharge les fichiers
+              1. Télécharge le fichier
             </h3>
-            <DownloadZipButton postId={post.id} hasRendered={hasRendered} />
-            <p className="text-xs text-zinc-500 mt-2">
-              Le ZIP contient : 10 PNG dans l&apos;ordre + caption.txt + README avec instructions.
-            </p>
+            {isSinglePost ? (
+              <>
+                <DownloadSinglePngButton
+                  postId={post.id}
+                  url={slideUrls[0] ?? null}
+                  hasRendered={hasRendered}
+                />
+                <p className="text-xs text-zinc-500 mt-2">
+                  1 PNG portrait 1080×1350 prêt à uploader sur Instagram.
+                </p>
+              </>
+            ) : (
+              <>
+                <DownloadZipButton postId={post.id} hasRendered={hasRendered} />
+                <p className="text-xs text-zinc-500 mt-2">
+                  Le ZIP contient : 10 PNG dans l&apos;ordre + caption.txt + README avec instructions.
+                </p>
+              </>
+            )}
           </div>
 
           <div>
@@ -130,11 +160,11 @@ export default async function PostValidationPage({ params }: { params: { id: str
 
         <section className="mt-12 mb-10">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400 mb-4">
-            10 slides (texte)
+            {previewLabel}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {slides.map((slide) => (
-              <SlidePreview key={slide.n} slide={slide} />
+            {slides.map((slide, i) => (
+              <SlidePreview key={slide.n ?? i} slide={slide} />
             ))}
           </div>
         </section>

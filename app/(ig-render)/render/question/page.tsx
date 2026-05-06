@@ -5,6 +5,7 @@ type Props = {
     questionLines?: string
     sub?: string
     pageNum?: string
+    single?: string
   }
 }
 
@@ -16,14 +17,16 @@ export default function QuestionPage({ searchParams }: Props) {
   const {
     questionLines: questionRaw = '¿QUÉ|*FALTA*?',
     sub: subRaw = '',
-    pageNum = '03'
+    pageNum = '03',
+    single
   } = searchParams
 
+  const isSingle = single === 'true'
   const questionLines = questionRaw.split('|').slice(0, 5)
   const subLines = subRaw.split('\n').slice(0, 3).filter(Boolean)
 
   return (
-    <div className="slide question">
+    <div className={`slide question${isSingle ? ' single-mode' : ''}`}>
       <div className="big-question">?</div>
 
       <div className="brand-top-right">SPINLY</div>

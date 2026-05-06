@@ -1,8 +1,19 @@
-import type { Slide } from './generator'
+import type { ContentType, Slide } from './generator'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://spinly-marketing.vercel.app'
 
-export function slideToTemplateUrl(slide: Slide): string {
+// Phase 10: when contentType === 'single_post', append &single=true so the
+// template hides the "X / 10" pagination footer.
+export function slideToTemplateUrl(slide: Slide, contentType: ContentType = 'carousel'): string {
+  const url = buildSlideUrl(slide)
+  if (contentType === 'single_post') {
+    const sep = url.includes('?') ? '&' : '?'
+    return `${url}${sep}single=true`
+  }
+  return url
+}
+
+function buildSlideUrl(slide: Slide): string {
   const pageNum = String(slide.n).padStart(2, '0')
 
   switch (slide.type) {

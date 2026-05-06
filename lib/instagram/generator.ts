@@ -5,6 +5,8 @@ import { getServerSupabase } from '@/lib/supabase/server'
 // Types
 // =============================================================================
 
+export type ContentType = 'carousel' | 'single_post' | 'story'
+
 export type SlideType =
   | 'hook'
   | 'tesis'
@@ -16,6 +18,10 @@ export type SlideType =
   | 'visual_bg'
   | 'timeline'
   | 'question'
+
+// Standalone slide types eligible for single_post mode.
+export const SINGLE_POST_TYPES = ['stat_bombe', 'question', 'tesis', 'visual_bg', 'hook'] as const
+export type SinglePostType = (typeof SINGLE_POST_TYPES)[number]
 
 export type Slide =
   | { n: number; type: 'hook'; title: string; subtitle?: string }
@@ -46,6 +52,26 @@ export type Slide =
 
 export interface GeneratedCarousel {
   slides: Slide[]
+  caption: string
+  hashtags: string[]
+}
+
+// Phase 10: Haiku now returns BOTH a carousel (10 slides) and a single_post
+// (1 standalone slide reusing one of the 5 SINGLE_POST_TYPES). They share
+// the caption + hashtags. The single_post is a *condensed synthesis* of the
+// carousel — it must read on its own without referencing other slides.
+export type SinglePostSlide =
+  | { type: 'stat_bombe'; stat: string; label: string; sub?: string }
+  | { type: 'question'; questionLines: string; sub?: string }
+  | { type: 'tesis'; title: string; subtitle: string }
+  | { type: 'visual_bg'; bgWord: string; titleLines: string; accentLine?: number }
+  | { type: 'hook'; title: string; subtitle?: string }
+
+export interface GeneratedDraft {
+  carousel: GeneratedCarousel
+  // single_post is best-effort. If Haiku fails to produce a valid one, the
+  // pipeline still ships the carousel and logs a warning.
+  single_post: SinglePostSlide | null
   caption: string
   hashtags: string[]
 }
@@ -168,11 +194,11 @@ HASHTAGS (12-15) :
 // Génération
 // =============================================================================
 
-export async function generateCarousel(angle: {
+export async function generateDraft(angle: {
   axis: string
   hook: string
   thesis: string
-}): Promise<GeneratedCarousel> {
+}): Promise<GeneratedDraft> {
   const userPrompt = `Génère un carrousel Instagram pour Spinly basé sur cet angle :
 
 AXE : ${angle.axis}
@@ -183,30 +209,69 @@ ${STRUCTURE_RULES}
 
 Retourne UNIQUEMENT du JSON valide, sans markdown, sans \`\`\`, sans préambule. Choisis le PATTERN le plus pertinent pour cet angle (A/B/C/D ou ton propre mix), n'utilise PAS forcément 5 senales d'affilée — varie pour créer du rythme visuel.
 
-Format exemple (PATTERN B avec mix de templates — adapte les "type" et champs selon ce que tu choisis) :
+Format exemple (PATTERN B avec mix de templates + single_post stat_bombe — adapte selon ton angle) :
 
 {
-  "slides": [
-    {"n": 1, "type": "hook", "title": "Tu mesero no pide reseñas. Aquí *5 razones*", "subtitle": "Y la solución no es darle un bonus."},
-    {"n": 2, "type": "question", "questionLines": "¿CUÁNTAS|RESEÑAS PERDISTE|ESTE MES|SIN *PEDIRLAS*?", "sub": "Tu competencia las pidió.\\nTú no."},
-    {"n": 3, "type": "tesis", "title": "El problema no es tu *equipo*. Es la *fricción*.", "subtitle": "Pedir reseñas a viva voz no escala. Hay que automatizar."},
-    {"n": 4, "type": "senal", "number": "01", "title": "Le da pena pedir", "body": "El mesero se siente mendigo cuando pide una reseña.", "question": "¿Tu equipo se siente cómodo pidiéndolas?"},
-    {"n": 5, "type": "senal", "number": "02", "title": "Olvida en 30 segundos", "body": "Pide la reseña al final del servicio. Cliente promete y olvida.", "question": ""},
-    {"n": 6, "type": "senal", "number": "03", "title": "No tiene incentivo", "body": "El mesero no gana nada cuando una reseña llega. Resultado: pide poco.", "question": ""},
-    {"n": 7, "type": "timeline", "title": "CÓMO FUNCIONA|SPINLY EN *5 PASOS*.", "steps": "Cliente escanea QR^en la mesa|Juega la ruleta^y gana un premio|Deja reseña Google^automáticamente|Recibe cupón^en su email|Tu negocio sube^en Google Maps"},
-    {"n": 8, "type": "stat_bombe", "stat": "68%", "label": "DE TUS CLIENTES\\nDEJARÁN RESEÑA", "sub": "si gamificas la experiencia"},
-    {"n": 9, "type": "visual_bg", "bgWord": "RESEÑAS", "titleLines": "150 NEGOCIOS LATAM|YA MULTIPLICAN|*x6* SUS RESEÑAS.", "accentLine": 2},
-    {"n": 10, "type": "cierre", "title": "¿Tu mesero todavía pide reseñas a viva voz?", "subtitle": "Audita tu Google gratis. En 24 hs tienes el diagnóstico."}
-  ],
+  "carousel": {
+    "slides": [
+      {"n": 1, "type": "hook", "title": "Tu mesero no pide reseñas. Aquí *5 razones*", "subtitle": "Y la solución no es darle un bonus."},
+      {"n": 2, "type": "question", "questionLines": "¿CUÁNTAS|RESEÑAS PERDISTE|ESTE MES|SIN *PEDIRLAS*?", "sub": "Tu competencia las pidió.\\nTú no."},
+      {"n": 3, "type": "tesis", "title": "El problema no es tu *equipo*. Es la *fricción*.", "subtitle": "Pedir reseñas a viva voz no escala. Hay que automatizar."},
+      {"n": 4, "type": "senal", "number": "01", "title": "Le da pena pedir", "body": "El mesero se siente mendigo cuando pide una reseña.", "question": "¿Tu equipo se siente cómodo pidiéndolas?"},
+      {"n": 5, "type": "senal", "number": "02", "title": "Olvida en 30 segundos", "body": "Pide la reseña al final del servicio. Cliente promete y olvida.", "question": ""},
+      {"n": 6, "type": "senal", "number": "03", "title": "No tiene incentivo", "body": "El mesero no gana nada cuando una reseña llega.", "question": ""},
+      {"n": 7, "type": "timeline", "title": "CÓMO FUNCIONA|SPINLY EN *5 PASOS*.", "steps": "Cliente escanea QR^en la mesa|Juega la ruleta^y gana un premio|Deja reseña^automáticamente|Recibe cupón^en su email|Tu negocio sube^en Google Maps"},
+      {"n": 8, "type": "stat_bombe", "stat": "68%", "label": "DE TUS CLIENTES\\nDEJARÁN RESEÑA", "sub": "si gamificas la experiencia"},
+      {"n": 9, "type": "visual_bg", "bgWord": "RESEÑAS", "titleLines": "150 NEGOCIOS LATAM|YA MULTIPLICAN|*x6* SUS RESEÑAS.", "accentLine": 2},
+      {"n": 10, "type": "cierre", "title": "¿Tu mesero todavía pide reseñas a viva voz?", "subtitle": "Audita tu Google gratis. En 24 hs tienes el diagnóstico."}
+    ]
+  },
+  "single_post": {
+    "type": "stat_bombe",
+    "stat": "68%",
+    "label": "DE TUS CLIENTES\\nDEJARÁN RESEÑA",
+    "sub": "si gamificas la experiencia · spinly.lat"
+  },
   "caption": "...",
   "hashtags": ["#reseñasGoogle", "#PymesLatam"]
 }
 
-IMPORTANT : la slide 10 est TOUJOURS de type "cierre". Les CTAs sont hardcodés (A. GUARDA ESTO + B. AUDITÁ GRATIS) — tu fournis juste title + subtitle.`
+IMPORTANT : la slide 10 est TOUJOURS de type "cierre". Les CTAs sont hardcodés (A. GUARDA ESTO + B. AUDITÁ GRATIS) — tu fournis juste title + subtitle.
+
+PHASE 10 — TU DOIS AUSSI GÉNÉRER UN single_post :
+
+En plus du carrousel, tu génères 1 SLIDE STANDALONE qui résume l'angle de manière condensée. Ce single_post sera publié SEUL sur Instagram (pas dans un carrousel) — il doit donc être COMPRIS sans contexte.
+
+Choisis 1 type parmi ces 5 selon ce qui colle le mieux à l'angle :
+- "stat_bombe" si tu as une stat forte (x6, +150, 68%, 30 días, $9 USD/mes)
+- "question" si l'angle est provocant
+- "tesis" si tu as une punchline qui se suffit
+- "visual_bg" si tu veux un effet visuel maximum
+- "hook" si le hook du carrousel se tient seul
+
+Mêmes champs que dans le carrousel (sauf que pas de "n" puisque c'est 1 slide). Pas de référence "voir slide X" ou "détails plus loin".
+
+FORMAT JSON FINAL (carousel + single_post + caption + hashtags) :
+
+{
+  "carousel": {
+    "slides": [...les 10 slides...]
+  },
+  "single_post": {
+    "type": "stat_bombe",
+    "stat": "x6",
+    "label": "MÁS RESEÑAS\\nEN GOOGLE MAPS",
+    "sub": "vs cafés sin Spinly"
+  },
+  "caption": "...",
+  "hashtags": ["#...", "#..."]
+}
+
+Le single_post utilise les MÊMES caption et hashtags que le carrousel (pas besoin de les répéter).`
 
   const response = await anthropic.messages.create({
     model: HAIKU_MODEL,
-    max_tokens: 3000,
+    max_tokens: 4000,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: userPrompt }]
   })
@@ -216,10 +281,15 @@ IMPORTANT : la slide 10 est TOUJOURS de type "cierre". Les CTAs sont hardcodés 
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) throw new Error('No JSON found in Claude response')
 
-  const parsed = JSON.parse(jsonMatch[0]) as GeneratedCarousel
+  const parsed = JSON.parse(jsonMatch[0]) as Partial<GeneratedDraft> & {
+    slides?: Slide[] // legacy shape support
+  }
 
-  if (!parsed.slides || parsed.slides.length !== 10) {
-    throw new Error(`Expected 10 slides, got ${parsed.slides?.length}`)
+  // Carousel: required, must be 10 slides. Accept both new shape (carousel.slides)
+  // and legacy flat shape ({slides: [...]}) so a stale Haiku response still works.
+  const carouselSlides = parsed.carousel?.slides ?? parsed.slides
+  if (!carouselSlides || carouselSlides.length !== 10) {
+    throw new Error(`Expected 10 carousel slides, got ${carouselSlides?.length ?? 0}`)
   }
   if (!parsed.caption || parsed.caption.length < 100) {
     throw new Error('Caption too short')
@@ -228,7 +298,29 @@ IMPORTANT : la slide 10 est TOUJOURS de type "cierre". Les CTAs sont hardcodés 
     throw new Error('Not enough hashtags')
   }
 
-  return parsed
+  // single_post: best-effort. If Haiku omits it or returns an invalid type,
+  // we keep the carousel and ship single_post=null — the cron will skip the
+  // second insert and just create the carousel.
+  let singlePost: SinglePostSlide | null = null
+  if (parsed.single_post && parsed.single_post.type) {
+    const t = parsed.single_post.type
+    if ((SINGLE_POST_TYPES as readonly string[]).includes(t)) {
+      singlePost = parsed.single_post as SinglePostSlide
+    } else {
+      console.warn(`[generator] single_post type "${t}" not in SINGLE_POST_TYPES, skipping`)
+    }
+  }
+
+  return {
+    carousel: {
+      slides: carouselSlides,
+      caption: parsed.caption,
+      hashtags: parsed.hashtags
+    },
+    single_post: singlePost,
+    caption: parsed.caption,
+    hashtags: parsed.hashtags
+  }
 }
 
 // =============================================================================
