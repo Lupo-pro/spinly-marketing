@@ -3,8 +3,12 @@ import { notFound } from 'next/navigation'
 import { getServerSupabase } from '@/lib/supabase/server'
 import type { Slide } from '@/lib/instagram/generator'
 import SlidePreview from '../_components/SlidePreview'
+import RenderButton from '../_components/RenderButton'
+import SlidesGrid from '../_components/SlidesGrid'
 import PostActions from './_components/PostActions'
 import { updatePostContent } from '../actions'
+
+export const dynamic = 'force-dynamic'
 
 const STATUS_LABEL: Record<string, string> = {
   draft: 'Draft',
@@ -38,6 +42,7 @@ export default async function PostValidationPage({ params }: { params: { id: str
   const hashtagsString = (post.hashtags ?? []).join(' ')
   const angle = Array.isArray(post.ig_angles) ? post.ig_angles[0] : post.ig_angles
   const statusClass = STATUS_COLOR[post.status] ?? STATUS_COLOR.draft
+  const slideUrls = (post.slide_image_urls ?? []) as string[]
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 p-8">
@@ -63,9 +68,19 @@ export default async function PostValidationPage({ params }: { params: { id: str
 
         <PostActions postId={post.id} status={post.status} />
 
-        <section className="mb-10 mt-8">
+        <section className="mt-8 mb-10">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+              Visuels rendus
+            </h2>
+            <RenderButton postId={post.id} hasUrls={slideUrls.length > 0} />
+          </div>
+          <SlidesGrid urls={slideUrls} />
+        </section>
+
+        <section className="mb-10">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400 mb-4">
-            10 slides
+            10 slides (texte)
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {slides.map((slide) => (

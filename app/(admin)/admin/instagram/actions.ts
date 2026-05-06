@@ -45,6 +45,27 @@ export async function updatePostContent(postId: string, formData: FormData) {
   revalidatePath(`/admin/instagram/${postId}`)
 }
 
+export async function renderPostAction(postId: string) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://spinly-marketing.vercel.app'
+  const res = await fetch(`${appUrl}/api/ig/render-post`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.CRON_SECRET}`
+    },
+    body: JSON.stringify({ postId }),
+    cache: 'no-store'
+  })
+  const data = await res.json()
+  revalidatePath(`/admin/instagram/${postId}`)
+  return data as {
+    rendered: number
+    total: number
+    urls: string[]
+    errors: { slideN: number; error: string }[]
+  }
+}
+
 export async function regeneratePost(postId: string) {
   const supabase = getServerSupabase()
   const { data: post } = await supabase

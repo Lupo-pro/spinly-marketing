@@ -4,5 +4,11 @@
       "path": "/api/cron/ig-generate",
       "schedule": "0 11 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "app/api/ig/render-post/route.ts": {
+      "maxDuration": 300,
+      "memory": 1024
+    }
+  }
 }

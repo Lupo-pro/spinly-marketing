@@ -4,8 +4,21 @@ import { createServerClient } from '@supabase/ssr'
 const ADMIN_EMAIL = 'corporate.lupo@gmail.com'
 
 export async function middleware(req: NextRequest) {
-  if (!req.nextUrl.pathname.startsWith('/admin')) {
+  const path = req.nextUrl.pathname
+  const isRender = path.startsWith('/render')
+  const isAdmin = path.startsWith('/admin')
+
+  if (!isRender && !isAdmin) {
     return NextResponse.next()
+  }
+
+  // Internal Puppeteer caller: bypass auth on /render/* via secret header.
+  if (isRender) {
+    const renderSecret = req.headers.get('x-render-secret')
+    if (renderSecret && renderSecret === process.env.CRON_SECRET) {
+      return NextResponse.next()
+    }
+    // Fall through to admin auth — Lupo can preview templates in his browser.
   }
 
   const res = NextResponse.next()
@@ -40,5 +53,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*']
+  matcher: ['/admin/:path*', '/render/:path*']
 }
