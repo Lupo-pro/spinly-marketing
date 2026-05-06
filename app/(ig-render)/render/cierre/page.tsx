@@ -25,7 +25,6 @@ export default function CierrePage({ searchParams }: Props) {
     <div className="slide cierre">
       {character && <div className="character-glow" />}
       {character && <div className="character" style={charStyle} />}
-      <div className="label-cierre">· CIERRE</div>
       <div className="brand-top-right">SPINLY</div>
       <div className="question">{question}</div>
       <div className="subtitle">{subtitle}</div>
@@ -33,7 +32,7 @@ export default function CierrePage({ searchParams }: Props) {
         <div className="cta-primary">{ctaPrimary}</div>
         {ctaSecondary && <div className="cta-secondary">{ctaSecondary}</div>}
       </div>
-      <div className="footer-handle">@spinly</div>
+      <div className="footer-handle">@spinly.lat</div>
       <div className="footer-pages">
         <strong>{pageNum}</strong> / 10
       </div>

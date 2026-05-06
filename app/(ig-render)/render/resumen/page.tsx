@@ -37,7 +37,6 @@ export default function ResumenPage({ searchParams }: Props) {
           </div>
         ))}
       </div>
-      <div className="label-top">RESUMEN</div>
       <div className="brand-top-right">SPINLY</div>
       <div className="content">
         <div className="title">{title}</div>
@@ -53,7 +52,7 @@ export default function ResumenPage({ searchParams }: Props) {
           ))}
         </div>
       </div>
-      <div className="footer-handle">@spinly</div>
+      <div className="footer-handle">@spinly.lat</div>
       <div className="footer-pages">
         <strong>{pageNum}</strong> / 10
       </div>

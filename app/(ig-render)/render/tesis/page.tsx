@@ -28,7 +28,6 @@ export default function TesisPage({ searchParams }: Props) {
   return (
     <div className="slide tesis">
       <div className="watermark">{watermark}</div>
-      <div className="label-top">TESIS</div>
       <div className="brand-top-right">SPINLY</div>
       <div className="content">
         <div className="title">
@@ -43,7 +42,7 @@ export default function TesisPage({ searchParams }: Props) {
           {subtitle}
         </div>
       </div>
-      <div className="footer-handle">@spinly</div>
+      <div className="footer-handle">@spinly.lat</div>
       <div className="footer-pages">
         <strong>{pageNum}</strong> / 10
       </div>

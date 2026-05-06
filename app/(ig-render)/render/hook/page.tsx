@@ -23,13 +23,12 @@ export default function HookPage({ searchParams }: Props) {
     <div className="slide hook">
       {character && <div className="character-glow" />}
       {character && <div className="character" style={charStyle} />}
-      <div className="label-top">HOOK</div>
       <div className="brand-top-right">SPINLY</div>
       <div className="title">
         {title} <em>{titleAccent}</em>
       </div>
       <div className="subtitle">{subtitle}</div>
-      <div className="footer-handle">@spinly</div>
+      <div className="footer-handle">@spinly.lat</div>
       <div className="footer-pages">
         <strong>{pageNum}</strong> / 10
       </div>

@@ -1,6 +1,5 @@
 type Props = {
   searchParams: {
-    label?: string
     title?: string
     stats?: string
     tagline?: string
@@ -17,7 +16,6 @@ const DEFAULT_STATS = [
 
 export default function ProofPage({ searchParams }: Props) {
   const {
-    label = 'SPINLY',
     title = 'CON SPINLY NO VAS A VER NINGUNA DE ESTAS 5 SEÑALES.',
     stats: statsJson,
     tagline = 'Transparencia total. Resultados reales.',
@@ -35,9 +33,6 @@ export default function ProofPage({ searchParams }: Props) {
   return (
     <div className="slide proof">
       <div className="watermark">{watermark}</div>
-      <div className="label-top">
-        POR QUÉ <span>{label}</span>
-      </div>
       <div className="brand-top-right">SPINLY</div>
       <div className="content">
         <div className="title">{title}</div>
@@ -51,7 +46,7 @@ export default function ProofPage({ searchParams }: Props) {
         </div>
       </div>
       <div className="tagline">{tagline}</div>
-      <div className="footer-handle">@spinly</div>
+      <div className="footer-handle">@spinly.lat</div>
       <div className="footer-pages">
         <strong>{pageNum}</strong> / 10
       </div>

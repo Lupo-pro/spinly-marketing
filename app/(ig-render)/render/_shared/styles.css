@@ -160,7 +160,7 @@ body {
   position: absolute;
   left: var(--safe-pad);
   right: var(--safe-pad);
-  bottom: 200px;
+  bottom: 160px;
   font-family: var(--font-manrope), sans-serif;
   font-weight: 400;
   font-size: 32px;
@@ -289,7 +289,7 @@ body {
 }
 .senal .body {
   position: absolute;
-  top: 600px;
+  top: 720px;
   left: var(--safe-pad);
   width: 800px;
   font-family: var(--font-manrope), sans-serif;
@@ -525,7 +525,7 @@ body {
 }
 .cierre .subtitle {
   position: absolute;
-  top: 580px;
+  top: 660px;
   left: var(--safe-pad);
   right: var(--safe-pad);
   font-family: var(--font-manrope), sans-serif;

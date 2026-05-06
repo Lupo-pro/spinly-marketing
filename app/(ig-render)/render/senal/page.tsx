@@ -29,7 +29,6 @@ export default function SenalPage({ searchParams }: Props) {
     <div className="slide senal">
       <div className="big-number">{number}</div>
       {character && <div className="character" style={charStyle} />}
-      <div className="label-senal">· SEÑAL {number}</div>
       <div className="brand-top-right">SPINLY</div>
       <div className="title" dangerouslySetInnerHTML={{ __html: title }} />
       <div className="body">
@@ -37,7 +36,7 @@ export default function SenalPage({ searchParams }: Props) {
         {body}
       </div>
       {question && <div className="question-box">{question}</div>}
-      <div className="footer-handle">@spinly</div>
+      <div className="footer-handle">@spinly.lat</div>
       <div className="footer-pages">
         <strong>{effectivePageNum}</strong> / 10
       </div>
