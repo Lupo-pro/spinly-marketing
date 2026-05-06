@@ -1,0 +1,83 @@
+.slide.timeline .tl-title {
+  position: absolute;
+  top: 140px;
+  left: var(--safe-pad);
+  right: var(--safe-pad);
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 64px;
+  line-height: 1.05;
+  letter-spacing: -1.5px;
+  text-transform: uppercase;
+  color: var(--white);
+  z-index: 5;
+}
+
+.slide.timeline .tl-title .accent {
+  background: var(--spinly-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.slide.timeline .tl-track {
+  position: absolute;
+  top: 380px;
+  left: var(--safe-pad);
+  right: var(--safe-pad);
+}
+
+.slide.timeline .tl-line {
+  position: absolute;
+  left: 50px;
+  top: 30px;
+  bottom: 30px;
+  width: 3px;
+  background: var(--spinly-grad);
+  opacity: 0.4;
+}
+
+.slide.timeline .tl-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 30px;
+  margin-bottom: 38px;
+  position: relative;
+}
+
+.slide.timeline .tl-step:last-child {
+  margin-bottom: 0;
+}
+
+.slide.timeline .tl-num {
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 64px;
+  line-height: 1;
+  background: var(--spinly-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  min-width: 100px;
+}
+
+.slide.timeline .tl-content {
+  flex: 1;
+  padding-top: 6px;
+}
+
+.slide.timeline .tl-step-title {
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 38px;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+  color: var(--white);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.slide.timeline .tl-step-sub {
+  font-family: var(--font-manrope), sans-serif;
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--gray-2);
+  line-height: 1.3;
+}

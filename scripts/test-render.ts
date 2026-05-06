@@ -9,7 +9,11 @@ const URLS = [
   'http://localhost:3000/render/senal',
   'http://localhost:3000/render/resumen',
   'http://localhost:3000/render/proof',
-  'http://localhost:3000/render/cierre'
+  'http://localhost:3000/render/cierre',
+  'http://localhost:3000/render/stat-bombe',
+  'http://localhost:3000/render/visual-bg',
+  'http://localhost:3000/render/timeline',
+  'http://localhost:3000/render/question'
 ]
 
 async function main() {

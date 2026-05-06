@@ -512,12 +512,12 @@ body {
 }
 .cierre .question {
   position: absolute;
-  top: 240px;
+  top: 180px;
   left: var(--safe-pad);
   right: var(--safe-pad);
   font-family: var(--font-archivo), sans-serif;
-  font-size: 78px;
-  line-height: 0.98;
+  font-size: 64px;
+  line-height: 1;
   letter-spacing: -1.5px;
   text-transform: uppercase;
   color: var(--white);
@@ -525,55 +525,78 @@ body {
 }
 .cierre .subtitle {
   position: absolute;
-  top: 660px;
+  top: 540px;
   left: var(--safe-pad);
   right: var(--safe-pad);
   font-family: var(--font-manrope), sans-serif;
   font-weight: 500;
-  font-size: 30px;
+  font-size: 28px;
   line-height: 1.4;
   color: var(--gray-1);
   z-index: 5;
 }
-.cierre .ctas {
+
+/* === CIERRE v2 — two CTAs side-by-side === */
+.cierre .cta-row {
   position: absolute;
-  bottom: 200px;
+  top: 720px;
   left: var(--safe-pad);
+  right: var(--safe-pad);
   display: flex;
-  flex-direction: column;
-  gap: 20px;
+  gap: 30px;
   z-index: 5;
 }
-.cierre .cta-primary {
-  background: var(--spinly-grad);
-  color: #000;
-  padding: 28px 44px;
-  border-radius: 16px;
+.cierre .cta-button {
+  flex: 1;
+  border-radius: 24px;
+  padding: 36px 32px;
+  position: relative;
+  min-height: 200px;
+}
+.cierre .cta-passive {
+  background: #0A0A0A;
+  border: 3px solid var(--white);
+}
+.cierre .cta-active {
+  background: linear-gradient(95deg, #F59E2C 0%, #FF4500 100%);
+  border: none;
+}
+.cierre .cta-letter {
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 42px;
+  line-height: 1;
+  letter-spacing: -1px;
+  color: var(--white);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.cierre .cta-sub {
   font-family: var(--font-manrope), sans-serif;
-  font-weight: 800;
-  font-size: 32px;
-  display: inline-flex;
-  align-items: center;
-  gap: 16px;
-  width: fit-content;
-  box-shadow: 0 30px 80px rgba(255,140,0,0.35);
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--white);
+  opacity: 0.85;
+  margin-top: 18px;
+  line-height: 1.3;
 }
-.cierre .cta-primary::after {
-  content: '↗';
-  font-size: 36px;
+.cierre .cta-passive .cta-sub {
+  color: var(--gray-2);
+  opacity: 1;
 }
-.cierre .cta-secondary {
-  background: transparent;
-  color: var(--gray-1);
-  padding: 24px 36px;
-  border-radius: 16px;
-  border: 2px solid var(--gray-3);
+.cierre .cta-arrow {
+  position: absolute;
+  top: 36px;
+  right: 32px;
+}
+.cierre .cta-fineprint {
+  position: absolute;
+  top: 950px;
+  left: var(--safe-pad);
+  right: var(--safe-pad);
+  text-align: center;
   font-family: var(--font-manrope), sans-serif;
-  font-weight: 600;
-  font-size: 26px;
-  display: inline-flex;
-  align-items: center;
-  gap: 14px;
-  width: fit-content;
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--gray-3);
+  z-index: 5;
 }
-.cierre .cta-secondary::before { content: '↓ '; }

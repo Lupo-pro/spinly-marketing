@@ -5,7 +5,17 @@ import { getServerSupabase } from '@/lib/supabase/server'
 // Types
 // =============================================================================
 
-export type SlideType = 'hook' | 'tesis' | 'senal' | 'resumen' | 'proof' | 'cierre'
+export type SlideType =
+  | 'hook'
+  | 'tesis'
+  | 'senal'
+  | 'resumen'
+  | 'proof'
+  | 'cierre'
+  | 'stat_bombe'
+  | 'visual_bg'
+  | 'timeline'
+  | 'question'
 
 export type Slide =
   | { n: number; type: 'hook'; title: string; subtitle?: string }
@@ -23,9 +33,16 @@ export type Slide =
       type: 'cierre'
       title: string
       subtitle: string
-      cta_primary: string
+      // CTAs are hardcoded on the rendered slide since Phase 8 (A. GUARDA ESTO +
+      // B. AUDITÁ GRATIS). These fields kept optional to stay backward-compatible
+      // with already-stored carousels generated before the rework.
+      cta_primary?: string
       cta_secondary?: string
     }
+  | { n: number; type: 'stat_bombe'; stat: string; label: string; sub?: string }
+  | { n: number; type: 'visual_bg'; bgWord: string; titleLines: string; accentLine?: number }
+  | { n: number; type: 'timeline'; title: string; steps: string }
+  | { n: number; type: 'question'; questionLines: string; sub?: string }
 
 export interface GeneratedCarousel {
   slides: Slide[]
@@ -56,55 +73,96 @@ Ton :
 
 Inspiration de format : carrousels minimalistes hook → tesis → 5 points numérotés → résumé → proof → CTA, sur fond noir avec accent couleur Spinly.`
 
-const STRUCTURE_RULES = `Structure imposée du carrousel (10 slides) :
+const STRUCTURE_RULES = `Structure du carrousel (10 slides). Tu disposes de 10 templates — varie pour créer du rythme visuel, ne reste pas bloqué sur la séquence "hook → 5 senales → resumen".
 
-Slide 1 (HOOK) — Type "hook"
-  - title : 5-12 mots, format "[Nombre] señales/razones/errores/verdades..." OU question provocatrice
-  - subtitle (optionnel) : 5-10 mots de mise en bouche
-  - CONVENTION ACCENT : entoure d'astérisques *MOT* le ou les derniers mots du titre — JAMAIS au milieu, l'accent passe en couleur dégradée sur une LIGNE SÉPARÉE après le reste. Reformule pour que le mot-clé tombe en fin de phrase. Exemples valides : "5 señales de que tu agencia te está *estafando*", "Tu mesero no pide reseñas. Aquí *5 razones*". Exemple invalide : "5 razones por las que tu mesero *no pide* reseñas" (le verbe finit séparé du complément).
+CONVENTION ACCENT (vaut pour TOUS les templates qui ont des champs textes) :
+- Entoure un mot-clé d'astérisques *MOT* pour le mettre en couleur dégradée Spinly.
+- Pour le HOOK : place *mot* à la FIN du titre (jamais au milieu — il passe sur une ligne séparée en gros).
+- Pour les autres : 1-2 *mot* libres dans le texte, place-les naturellement.
 
-Slide 2 (TESIS) — Type "tesis"
-  - title : reformulation provocatrice du problème en 10-20 mots
-  - subtitle : mise en contexte 1-2 phrases
-  - CONVENTION ACCENT : 1 ou 2 astérisques *MOT* dans le titre. Exemple : "Una agencia que falla no siempre lo hace con *números malos*. Lo hace con los *números equivocados*."
+TEMPLATES DISPONIBLES (10) :
 
-Slides 3-7 (SEÑALES 01-05) — Type "senal"
-  - number : "01" à "05" (toujours 2 caractères)
-  - title : la señal en 4-8 mots, sans astérisques
-  - body : 2-3 phrases d'explication
-  - question (optionnel) : question rhétorique pour faire réagir
+1. **hook** — Slide d'accroche
+   { "type": "hook", "title": "5 SEÑALES DE QUE TU AGENCIA TE ESTÁ *ESTAFANDO*", "subtitle": "Estas señales no mienten." }
 
-Slide 8 (RESUMEN) — Type "resumen"
-  - title : "Las 5 señales que no puedes ignorar" ou variante
-  - items : array des 5 señales avec number + title court (5-8 mots) + subtitle court (8-12 mots)
+2. **tesis** — Punchline qui pose la thèse, 1-2 mots accentués
+   { "type": "tesis", "title": "El problema no son los *números malos*. Son los *números equivocados*.", "subtitle": "Estas son las 5 señales que debes conocer." }
 
-Slide 9 (PROOF) — Type "proof"
-  - title : phrase de transition vers Spinly
-  - stats : 3 chiffres clés Spinly. Utiliser uniquement les vrais chiffres :
-    - "x6", "MÁS RESEÑAS GOOGLE"
-    - "68%", "PARTICIPACIÓN CLIENTES"
-    - "+150", "NEGOCIOS LATAM"
-    - "30 días", "GRATIS"
-    - "$9 USD/mes", "DESDE"
-    Choisis 3 selon la pertinence par rapport à l'angle.
+3. **senal** — Argument numéroté (01-05)
+   { "type": "senal", "number": "01", "title": "Solo te muestran resultados buenos", "body": "Una buena agencia te muestra TODO. Errores, pruebas, pérdidas.", "question": "¿Tu agencia te muestra los errores que cometió?" }
 
-Slide 10 (CIERRE) — Type "cierre"
-  - title : question d'engagement
-  - subtitle : appel à l'action contextualisé
-  - cta_primary : "Audita tu negocio gratis" → spinly.lat/audit
-  - cta_secondary (optionnel) : "Guarda y comparte este post"
+4. **resumen** — Récap des 5 points
+   { "type": "resumen", "title": "Las 5 señales que no puedes ignorar.", "items": [{"number":"01","title":"...","subtitle":"..."}, ...x5] }
+
+5. **proof** — 3 stats verticales (x6, 68%, +150, 30 días, $9 USD/mes)
+   { "type": "proof", "title": "Spinly te da lo que tu agencia no.", "stats": [{"value":"x6","label":"MÁS RESEÑAS GOOGLE"}, {"value":"68%","label":"PARTICIPACIÓN CLIENTES"}, {"value":"+150","label":"NEGOCIOS LATAM"}] }
+
+6. **cierre** — Slide finale OBLIGATOIRE en position 10. Les CTAs sont hardcodés (GUARDA + AUDITÁ), tu fournis juste la question + le sous-titre :
+   { "type": "cierre", "title": "¿IDENTIFICASTE ALGUNA DE ESTAS 5 SEÑALES?", "subtitle": "Audita tu Google gratis. En 24 hs tienes el diagnóstico." }
+
+7. **stat_bombe** — UN chiffre énorme + label + sub. Idéal slide 9 (avant cierre) ou en remplacement d'un proof.
+   { "type": "stat_bombe", "stat": "x6", "label": "MÁS RESEÑAS\\nEN GOOGLE MAPS", "sub": "vs cafés sin Spinly" }
+   - "stat" : court (3-5 caractères, ex "x6", "+150", "68%", "9$")
+   - "label" : 1-2 lignes en MAJUSCULES, séparées par \\n
+   - "sub" optionnel : phrase courte en bas
+
+8. **visual_bg** — Mot répété en background + 3-4 lignes punch. Alternative à tesis ou hook puissant.
+   { "type": "visual_bg", "bgWord": "RESEÑAS", "titleLines": "EL PROBLEMA|NO ES TU CAFÉ.|SON LAS RESEÑAS.", "accentLine": 2 }
+   - "bgWord" : 1 seul mot court (max 12 caractères), MAJUSCULES
+   - "titleLines" : 2 à 4 lignes séparées par |
+   - "accentLine" : index 0-based de la ligne en dégradé (typiquement la dernière)
+
+9. **timeline** — 3 à 5 étapes numérotées, idéal pour expliquer un process
+   { "type": "timeline", "title": "CÓMO FUNCIONA|SPINLY EN *5 PASOS*.", "steps": "Tu cliente escanea el QR^en la mesa o en la barra|Juega la ruleta^y gana un premio real|Deja reseña Google^automáticamente|Recibe cupón^en su email|Tu negocio sube^en Google Maps" }
+   - "title" : 1-2 lignes séparées par |, *mot* possible
+   - "steps" : 3-5 étapes séparées par |, chaque étape "title^subtitle"
+
+10. **question** — Énorme ? en background + question piercante
+    { "type": "question", "questionLines": "¿CUÁNTAS|RESEÑAS PERDISTE|ESTE MES|SIN *PEDIRLAS*?", "sub": "Tu competencia las pidió.\\nTú no." }
+    - "questionLines" : 2 à 5 lignes courtes séparées par |
+    - "sub" optionnel : 1-2 lignes (séparées par \\n)
+
+PATTERNS RECOMMANDÉS (choisis-en un selon l'angle, ou compose ton propre mix) :
+
+PATTERN A — "Razones" classique (5 raisons numérotées)
+1.hook 2.tesis 3-7.senal x5 8.resumen 9.stat_bombe 10.cierre
+
+PATTERN B — "Pédagogique" (comment ça marche)
+1.hook 2.question 3.tesis 4-6.senal x3 7.timeline 8.proof 9.visual_bg 10.cierre
+
+PATTERN C — "Provocation"
+1.question 2.visual_bg 3-5.senal x3 6.timeline 7.stat_bombe 8.tesis 9.proof 10.cierre
+
+PATTERN D — "Mini-formation" (variété maximale, peu de senales)
+1.hook 2.tesis 3.senal 4.visual_bg 5.senal 6.stat_bombe 7.timeline 8.senal 9.proof 10.cierre
+
+RÈGLES :
+- La slide 10 est TOUJOURS un cierre
+- La slide 1 est généralement hook OU question (rôle d'accroche)
+- Si tu utilises des senales, numérote 01,02,03... séquentiellement
+- Évite 2 fois le même template d'affilée (sauf senales numérotées)
+- bgWord (visual_bg) : 1 seul mot court, MAJUSCULES
+- Reste 100% espagnol naturel LatAm. Pas d'anglicismes techniques
+
+VARIÉTÉ DES HOOKS (évite la formule unique "X razones por las que Y") :
+- Stat-driven : "150 cafés después. Esto es lo que tienen en común."
+- Provocation : "Tu mesero no es vago. Es que nadie le explica los miedos."
+- Counter-intuitif : "El problema nunca fue tu café. Es Google Maps."
+- Question (utiliser type "question" plutôt que "hook" alors)
+- Promesse : "3 cosas que tu negocio puede automatizar hoy mismo."
+- Révélation : "Lo que pasa cuando un cliente no deja reseña."
+Varie les nombres (3, 5, 7, 12, 30, 68%, x6, 150). Pas toujours 5.
 
 CAPTION (200-400 mots) :
-- Reprend les 5 points en prose
 - Hook engageant en première ligne
-- Liste numérotée 01 → 05 avec micro-développement
+- Reprend les points clés en prose (numérotation possible si applicable)
 - CTA final clair vers spinly.lat/audit
-- Saut de ligne avant les hashtags (qui seront ajoutés séparément)
+- Saut de ligne avant les hashtags
 
 HASHTAGS (12-15) :
 - Mix : reseñasGoogle, GoogleMaps, MarketingLocal, PymesLatam, EmprendedoresLatam
 - 1-2 par pays cible (#PymesColombia, #PymesMexico, #PymesEcuador)
-- 2-3 par secteur si pertinent à l'angle (#Cafeterias, #Restaurantes, #Peluquerías)`
+- 2-3 par secteur si pertinent (#Cafeterias, #Restaurantes, #Peluquerías)`
 
 // =============================================================================
 // Génération
@@ -123,24 +181,28 @@ THÈSE : ${angle.thesis}
 
 ${STRUCTURE_RULES}
 
-Retourne UNIQUEMENT du JSON valide, sans markdown, sans \`\`\`, sans préambule. Format exact :
+Retourne UNIQUEMENT du JSON valide, sans markdown, sans \`\`\`, sans préambule. Choisis le PATTERN le plus pertinent pour cet angle (A/B/C/D ou ton propre mix), n'utilise PAS forcément 5 senales d'affilée — varie pour créer du rythme visuel.
+
+Format exemple (PATTERN B avec mix de templates — adapte les "type" et champs selon ce que tu choisis) :
 
 {
   "slides": [
-    {"n": 1, "type": "hook", "title": "...", "subtitle": "..."},
-    {"n": 2, "type": "tesis", "title": "...", "subtitle": "..."},
-    {"n": 3, "type": "senal", "number": "01", "title": "...", "body": "...", "question": "..."},
-    {"n": 4, "type": "senal", "number": "02", "title": "...", "body": "...", "question": "..."},
-    {"n": 5, "type": "senal", "number": "03", "title": "...", "body": "...", "question": "..."},
-    {"n": 6, "type": "senal", "number": "04", "title": "...", "body": "...", "question": "..."},
-    {"n": 7, "type": "senal", "number": "05", "title": "...", "body": "...", "question": "..."},
-    {"n": 8, "type": "resumen", "title": "...", "items": [{"number":"01","title":"...","subtitle":"..."}]},
-    {"n": 9, "type": "proof", "title": "...", "stats": [{"value":"...","label":"..."}]},
-    {"n": 10, "type": "cierre", "title": "...", "subtitle": "...", "cta_primary": "...", "cta_secondary": "..."}
+    {"n": 1, "type": "hook", "title": "Tu mesero no pide reseñas. Aquí *5 razones*", "subtitle": "Y la solución no es darle un bonus."},
+    {"n": 2, "type": "question", "questionLines": "¿CUÁNTAS|RESEÑAS PERDISTE|ESTE MES|SIN *PEDIRLAS*?", "sub": "Tu competencia las pidió.\\nTú no."},
+    {"n": 3, "type": "tesis", "title": "El problema no es tu *equipo*. Es la *fricción*.", "subtitle": "Pedir reseñas a viva voz no escala. Hay que automatizar."},
+    {"n": 4, "type": "senal", "number": "01", "title": "Le da pena pedir", "body": "El mesero se siente mendigo cuando pide una reseña.", "question": "¿Tu equipo se siente cómodo pidiéndolas?"},
+    {"n": 5, "type": "senal", "number": "02", "title": "Olvida en 30 segundos", "body": "Pide la reseña al final del servicio. Cliente promete y olvida.", "question": ""},
+    {"n": 6, "type": "senal", "number": "03", "title": "No tiene incentivo", "body": "El mesero no gana nada cuando una reseña llega. Resultado: pide poco.", "question": ""},
+    {"n": 7, "type": "timeline", "title": "CÓMO FUNCIONA|SPINLY EN *5 PASOS*.", "steps": "Cliente escanea QR^en la mesa|Juega la ruleta^y gana un premio|Deja reseña Google^automáticamente|Recibe cupón^en su email|Tu negocio sube^en Google Maps"},
+    {"n": 8, "type": "stat_bombe", "stat": "68%", "label": "DE TUS CLIENTES\\nDEJARÁN RESEÑA", "sub": "si gamificas la experiencia"},
+    {"n": 9, "type": "visual_bg", "bgWord": "RESEÑAS", "titleLines": "150 NEGOCIOS LATAM|YA MULTIPLICAN|*x6* SUS RESEÑAS.", "accentLine": 2},
+    {"n": 10, "type": "cierre", "title": "¿Tu mesero todavía pide reseñas a viva voz?", "subtitle": "Audita tu Google gratis. En 24 hs tienes el diagnóstico."}
   ],
   "caption": "...",
   "hashtags": ["#reseñasGoogle", "#PymesLatam"]
-}`
+}
+
+IMPORTANT : la slide 10 est TOUJOURS de type "cierre". Les CTAs sont hardcodés (A. GUARDA ESTO + B. AUDITÁ GRATIS) — tu fournis juste title + subtitle.`
 
   const response = await anthropic.messages.create({
     model: HAIKU_MODEL,

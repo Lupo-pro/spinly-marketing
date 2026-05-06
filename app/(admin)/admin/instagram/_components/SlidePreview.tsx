@@ -6,7 +6,11 @@ const AXIS_BADGE_COLORS: Record<string, string> = {
   senal: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
   resumen: 'bg-violet-500/15 text-violet-300 border-violet-500/30',
   proof: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-  cierre: 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30'
+  cierre: 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30',
+  stat_bombe: 'bg-orange-500/15 text-orange-300 border-orange-500/30',
+  visual_bg: 'bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/30',
+  timeline: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30',
+  question: 'bg-pink-500/15 text-pink-300 border-pink-500/30'
 }
 
 function renderTitle(text: string) {
@@ -95,12 +99,83 @@ export default function SlidePreview({ slide }: { slide: Slide }) {
         <div>
           <h3 className="text-base font-semibold mb-2">{slide.title}</h3>
           <p className="text-sm text-zinc-400 mb-3">{slide.subtitle}</p>
-          <div className="flex flex-col gap-1 text-sm">
-            <span className="text-amber-300">→ {slide.cta_primary}</span>
-            {slide.cta_secondary && (
-              <span className="text-zinc-500">→ {slide.cta_secondary}</span>
-            )}
+          <div className="flex gap-2 text-xs">
+            <span className="px-2 py-1 rounded border border-zinc-600 text-zinc-300">
+              A. GUARDA ESTO
+            </span>
+            <span className="px-2 py-1 rounded bg-amber-500/30 text-amber-200">
+              B. AUDITÁ GRATIS
+            </span>
           </div>
+        </div>
+      )}
+
+      {slide.type === 'stat_bombe' && (
+        <div>
+          <div className="text-4xl font-bold text-amber-300 mb-2">{slide.stat}</div>
+          <div className="text-sm font-semibold whitespace-pre-line mb-2">{slide.label}</div>
+          {slide.sub && <p className="text-xs text-zinc-500">{slide.sub}</p>}
+        </div>
+      )}
+
+      {slide.type === 'visual_bg' && (
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">
+            bg word: <span className="font-mono text-fuchsia-300">{slide.bgWord}</span>
+          </div>
+          <div className="space-y-0.5">
+            {slide.titleLines.split('|').map((line, i) => (
+              <div
+                key={i}
+                className={
+                  i === (slide.accentLine ?? 0)
+                    ? 'text-base font-semibold text-amber-300'
+                    : 'text-base font-semibold'
+                }
+              >
+                {line}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {slide.type === 'timeline' && (
+        <div>
+          <h3 className="text-sm font-semibold mb-3">
+            {renderTitle(slide.title.replace(/\|/g, ' '))}
+          </h3>
+          <ol className="space-y-2 text-sm">
+            {slide.steps.split('|').map((step, i) => {
+              const [stepTitle, stepSub] = step.split('^')
+              return (
+                <li key={i} className="flex gap-3">
+                  <span className="font-mono text-amber-300 shrink-0">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <span>
+                    <span className="font-medium">{stepTitle}</span>
+                    {stepSub && <span className="text-zinc-500"> — {stepSub}</span>}
+                  </span>
+                </li>
+              )
+            })}
+          </ol>
+        </div>
+      )}
+
+      {slide.type === 'question' && (
+        <div>
+          <div className="space-y-0.5">
+            {slide.questionLines.split('|').map((line, i) => (
+              <div key={i} className="text-base font-semibold leading-tight">
+                {renderTitle(line)}
+              </div>
+            ))}
+          </div>
+          {slide.sub && (
+            <p className="text-sm text-zinc-400 mt-3 whitespace-pre-line">{slide.sub}</p>
+          )}
         </div>
       )}
     </div>

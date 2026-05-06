@@ -58,14 +58,55 @@ export function slideToTemplateUrl(slide: Slide): string {
     }
 
     case 'cierre': {
+      // CTAs are hardcoded in the template now; we still pass the legacy
+      // ctaPrimary/ctaSecondary fields if present so old carousels keep
+      // their data round-trip but the template ignores them.
       const params = new URLSearchParams({
         question: slide.title,
         subtitle: slide.subtitle,
-        ctaPrimary: slide.cta_primary,
-        ctaSecondary: slide.cta_secondary || '',
         pageNum
       })
+      if (slide.cta_primary) params.set('ctaPrimary', slide.cta_primary)
+      if (slide.cta_secondary) params.set('ctaSecondary', slide.cta_secondary)
       return `${APP_URL}/render/cierre?${params.toString()}`
+    }
+
+    case 'stat_bombe': {
+      const params = new URLSearchParams({
+        stat: slide.stat,
+        label: slide.label,
+        sub: slide.sub || '',
+        pageNum
+      })
+      return `${APP_URL}/render/stat-bombe?${params.toString()}`
+    }
+
+    case 'visual_bg': {
+      const params = new URLSearchParams({
+        bgWord: slide.bgWord,
+        titleLines: slide.titleLines,
+        accentLine: String(slide.accentLine ?? 0),
+        pageNum
+      })
+      return `${APP_URL}/render/visual-bg?${params.toString()}`
+    }
+
+    case 'timeline': {
+      const params = new URLSearchParams({
+        title: slide.title,
+        steps: slide.steps,
+        pageNum
+      })
+      return `${APP_URL}/render/timeline?${params.toString()}`
+    }
+
+    case 'question': {
+      const params = new URLSearchParams({
+        questionLines: slide.questionLines,
+        sub: slide.sub || '',
+        pageNum
+      })
+      return `${APP_URL}/render/question?${params.toString()}`
     }
   }
 }

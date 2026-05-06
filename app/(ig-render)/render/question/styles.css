@@ -1,0 +1,61 @@
+.slide.question .big-question {
+  position: absolute;
+  top: -50px;
+  right: -100px;
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 900px;
+  line-height: 1;
+  background: var(--spinly-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  opacity: 0.85;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+}
+
+/* Brand override: white instead of gradient on this dark+bold layout */
+.slide.question .brand-top-right {
+  background: none;
+  -webkit-text-fill-color: var(--white);
+  color: var(--white);
+}
+
+.slide.question .q-stack {
+  position: absolute;
+  top: 200px;
+  left: var(--safe-pad);
+  right: var(--safe-pad);
+  z-index: 5;
+}
+
+.slide.question .q-line {
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 80px;
+  line-height: 1.05;
+  letter-spacing: -1.5px;
+  text-transform: uppercase;
+  color: var(--white);
+  margin-bottom: 4px;
+}
+
+.slide.question .q-line .accent {
+  background: var(--spinly-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.slide.question .q-sub {
+  position: absolute;
+  top: 700px;
+  left: var(--safe-pad);
+  right: var(--safe-pad);
+  z-index: 5;
+  font-family: var(--font-manrope), sans-serif;
+  font-size: 36px;
+  font-weight: 500;
+  color: var(--gray-2);
+  line-height: 1.4;
+}
