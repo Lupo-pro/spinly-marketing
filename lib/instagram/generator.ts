@@ -61,7 +61,7 @@ const STRUCTURE_RULES = `Structure imposée du carrousel (10 slides) :
 Slide 1 (HOOK) — Type "hook"
   - title : 5-12 mots, format "[Nombre] señales/razones/errores/verdades..." OU question provocatrice
   - subtitle (optionnel) : 5-10 mots de mise en bouche
-  - CONVENTION ACCENT : entoure d'astérisques *MOT* le mot-clé du titre qui doit apparaître en couleur dégradée. Exemple : "5 señales de que tu agencia te está *estafando*"
+  - CONVENTION ACCENT : entoure d'astérisques *MOT* le ou les derniers mots du titre — JAMAIS au milieu, l'accent passe en couleur dégradée sur une LIGNE SÉPARÉE après le reste. Reformule pour que le mot-clé tombe en fin de phrase. Exemples valides : "5 señales de que tu agencia te está *estafando*", "Tu mesero no pide reseñas. Aquí *5 razones*". Exemple invalide : "5 razones por las que tu mesero *no pide* reseñas" (le verbe finit séparé du complément).
 
 Slide 2 (TESIS) — Type "tesis"
   - title : reformulation provocatrice du problème en 10-20 mots
