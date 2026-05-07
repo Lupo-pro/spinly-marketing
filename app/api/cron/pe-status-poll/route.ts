@@ -3,6 +3,7 @@ import { getServerSupabase } from '@/lib/supabase/server'
 import { getPost } from '@/lib/posteverywhere/client'
 import { alertPendingDrafts } from '@/lib/pilot/alerts'
 import { runProcessingWatchdog } from '@/lib/pilot/watchdog'
+import { collectAllPendingStats } from '@/lib/stats/collector'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -54,12 +55,24 @@ export async function GET(req: Request) {
     } catch (err) {
       console.error('[pe-status-poll] alertPendingDrafts failed:', err)
     }
+    let statsResult: Awaited<ReturnType<typeof collectAllPendingStats>> = {
+      checked: 0,
+      updated: 0,
+      errors: 0,
+      errorSamples: []
+    }
+    try {
+      statsResult = await collectAllPendingStats()
+    } catch (err) {
+      console.error('[pe-status-poll] collectAllPendingStats failed:', err)
+    }
     return NextResponse.json({
       ok: true,
       checked: 0,
       updated: 0,
       alertedDrafts: alertResult.alerted,
-      watchdogRetriggered: watchdogResult.retriggered.length
+      watchdogRetriggered: watchdogResult.retriggered.length,
+      stats: statsResult
     })
   }
 
@@ -106,12 +119,27 @@ export async function GET(req: Request) {
     console.error('[pe-status-poll] alertPendingDrafts failed:', err)
   }
 
+  // Phase 18 — collect engagement stats for posts that just transitioned to
+  // published, plus any older ones whose previous snapshot is >12h stale.
+  let statsResult: Awaited<ReturnType<typeof collectAllPendingStats>> = {
+    checked: 0,
+    updated: 0,
+    errors: 0,
+    errorSamples: []
+  }
+  try {
+    statsResult = await collectAllPendingStats()
+  } catch (err) {
+    console.error('[pe-status-poll] collectAllPendingStats failed:', err)
+  }
+
   return NextResponse.json({
     ok: true,
     checked: pending.length,
     updated,
     errors,
     alertedDrafts: alertResult.alerted,
-    watchdogRetriggered: watchdogResult.retriggered.length
+    watchdogRetriggered: watchdogResult.retriggered.length,
+    stats: statsResult
   })
 }

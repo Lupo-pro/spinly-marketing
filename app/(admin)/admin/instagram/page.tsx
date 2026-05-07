@@ -170,19 +170,36 @@ export default async function InstagramAdminPage({
           }}
         >
           <ContentTypeFilter currentFilter={currentFilter} />
-          <Link
-            href="/admin/instagram/account"
-            style={{
-              fontSize: 13,
-              color: SPINLY_BRAND.text.secondary,
-              textDecoration: 'none',
-              padding: '8px 12px',
-              border: `1px solid ${SPINLY_BRAND.border.default}`,
-              borderRadius: 10
-            }}
-          >
-            Compte & monitoring →
-          </Link>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Link
+              href="/admin/instagram/stats"
+              style={{
+                fontSize: 13,
+                color: '#60A5FA',
+                textDecoration: 'none',
+                padding: '8px 12px',
+                border: '1px solid rgba(96, 165, 250, 0.3)',
+                background: 'rgba(96, 165, 250, 0.08)',
+                borderRadius: 10,
+                fontWeight: 500
+              }}
+            >
+              📊 Stats &amp; Performance
+            </Link>
+            <Link
+              href="/admin/instagram/account"
+              style={{
+                fontSize: 13,
+                color: SPINLY_BRAND.text.secondary,
+                textDecoration: 'none',
+                padding: '8px 12px',
+                border: `1px solid ${SPINLY_BRAND.border.default}`,
+                borderRadius: 10
+              }}
+            >
+              Compte &amp; monitoring →
+            </Link>
+          </div>
         </div>
 
         <PostsGrid posts={typedPosts} />

@@ -231,3 +231,51 @@ export async function getPost(postId: string): Promise<PeCreatedPost> {
   const res = await pe<{ data: PeCreatedPost }>(`/posts/${postId}`)
   return res.data
 }
+
+// ============================================================================
+// Stats / results
+// ============================================================================
+//
+// PE exposes /posts/:id/results with engagement counters once the post has
+// gone live. The shape isn't formally stable across providers, so we keep
+// this struct loose — the caller (lib/stats/collector.ts) defensively
+// extracts whatever fields are present and persists the full raw response
+// in raw_pe_response for later reprocessing.
+
+export interface PePerPlatformStats {
+  reach?: number
+  impressions?: number
+  likes?: number
+  comments?: number
+  shares?: number
+  saves?: number
+  // PE may return additional metrics (views, profile_visits…). Keep open.
+  [key: string]: unknown
+}
+
+export interface PeDestinationResult {
+  platform: string
+  account_id?: number
+  status: string
+  permalink?: string
+  stats?: PePerPlatformStats
+  error?: string
+}
+
+export interface PePostResults {
+  post_id: string
+  status?: string
+  destinations: PeDestinationResult[]
+  aggregated_stats?: PePerPlatformStats
+}
+
+export async function getPostResults(pePostId: string): Promise<PePostResults> {
+  // Some providers nest under data, others return the bare object. Accept both.
+  const raw = await pe<{ data?: PePostResults } | PePostResults>(
+    `/posts/${pePostId}/results`
+  )
+  if (raw && typeof raw === 'object' && 'data' in raw && raw.data) {
+    return raw.data as PePostResults
+  }
+  return raw as PePostResults
+}
