@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/supabase/server'
 import { getPost } from '@/lib/posteverywhere/client'
+import { alertPendingDrafts } from '@/lib/pilot/alerts'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -33,7 +34,18 @@ export async function GET(req: Request) {
     .not('pe_post_id', 'is', null)
 
   if (!pending || pending.length === 0) {
-    return NextResponse.json({ ok: true, checked: 0, updated: 0 })
+    let alertResult: { alerted: number; ids: string[] } = { alerted: 0, ids: [] }
+    try {
+      alertResult = await alertPendingDrafts()
+    } catch (err) {
+      console.error('[pe-status-poll] alertPendingDrafts failed:', err)
+    }
+    return NextResponse.json({
+      ok: true,
+      checked: 0,
+      updated: 0,
+      alertedDrafts: alertResult.alerted
+    })
   }
 
   let updated = 0
@@ -69,5 +81,21 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, checked: pending.length, updated, errors })
+  // Piggyback the J+1 pending-drafts Telegram alert here so we stay at 2
+  // crons total on Hobby. This is independent — if it throws we still
+  // return the status-poll result.
+  let alertResult: { alerted: number; ids: string[] } = { alerted: 0, ids: [] }
+  try {
+    alertResult = await alertPendingDrafts()
+  } catch (err) {
+    console.error('[pe-status-poll] alertPendingDrafts failed:', err)
+  }
+
+  return NextResponse.json({
+    ok: true,
+    checked: pending.length,
+    updated,
+    errors,
+    alertedDrafts: alertResult.alerted
+  })
 }
