@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/ig-generate",
       "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/cron/pe-status-poll",
+      "schedule": "0 14 * * *"
     }
   ],
   "functions": {

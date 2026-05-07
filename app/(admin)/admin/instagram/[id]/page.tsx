@@ -9,6 +9,7 @@ import DownloadZipButton from '../_components/DownloadZipButton'
 import DownloadSinglePngButton from '../_components/DownloadSinglePngButton'
 import CaptionBlock from '../_components/CaptionBlock'
 import MarkPublishedButton from '../_components/MarkPublishedButton'
+import PublishButton from '../_components/PublishButton'
 import PostActions from './_components/PostActions'
 import { updatePostContent } from '../actions'
 
@@ -115,10 +116,27 @@ export default async function PostValidationPage({ params }: { params: { id: str
           <SlidesGrid urls={slideUrls} />
         </section>
 
+        <section className="mt-12 mb-10 bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-2xl font-bold">Publication automatique</h2>
+            <span className="text-xs text-zinc-500">via PostEverywhere</span>
+          </div>
+          <PublishButton
+            postId={post.id}
+            status={post.status}
+            contentType={contentType}
+            hasRendered={hasRendered}
+            peStatus={post.pe_status ?? null}
+            peScheduledFor={post.pe_scheduled_for ?? null}
+            peError={post.pe_error ?? null}
+            peDestinations={post.pe_destinations ?? null}
+          />
+        </section>
+
         <section className="mt-12 space-y-8">
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-bold">Publication manuelle</h2>
-            <span className="text-xs text-zinc-500">via Buffer / Later / app IG</span>
+            <span className="text-xs text-zinc-500">fallback : ZIP / PNG / Buffer</span>
           </div>
 
           <div>

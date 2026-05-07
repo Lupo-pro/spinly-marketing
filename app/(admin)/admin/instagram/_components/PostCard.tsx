@@ -62,12 +62,24 @@ export type PostCardData = {
   published_at?: string | null
   ig_permalink?: string | null
   ig_angles: { axis: string } | null
+  // Phase 12: PostEverywhere publishing state
+  pe_status?: string | null
+  pe_scheduled_for?: string | null
 }
 
 const TYPE_LABEL: Record<string, string> = {
   carousel: '🎴 Carrousel',
   single_post: '📷 Post',
   story: '📱 Story'
+}
+
+const PE_BADGE: Record<string, { label: string; cls: string }> = {
+  queued: { label: '⏳ En file', cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
+  scheduled: { label: '📅 Programmé', cls: 'bg-sky-500/15 text-sky-300 border-sky-500/30' },
+  publishing: { label: '🔄 Publication', cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
+  published: { label: '✅ Publié', cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
+  partial: { label: '⚠️ Partiel', cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
+  failed: { label: '❌ Échec', cls: 'bg-rose-500/15 text-rose-300 border-rose-500/30' }
 }
 
 export default function PostCard({ post }: { post: PostCardData }) {
@@ -113,12 +125,25 @@ export default function PostCard({ post }: { post: PostCardData }) {
       </p>
 
       <div className="flex items-center gap-2 mt-3 flex-wrap">
-        {isReady && (
+        {/* "Prêt" badge — only when nothing has been pushed to PostEverywhere yet */}
+        {isReady && !post.pe_status && (
           <span className="text-[10px] px-2 py-0.5 rounded bg-orange-500/15 text-orange-300 border border-orange-500/30">
             📦 Prêt
           </span>
         )}
-        {post.status === 'published' && post.published_at && (
+        {/* PE-published wins over the manual "published" path; both can show */}
+        {post.pe_status && PE_BADGE[post.pe_status] && (
+          <span
+            className={`text-[10px] px-2 py-0.5 rounded border ${PE_BADGE[post.pe_status].cls}`}
+          >
+            {PE_BADGE[post.pe_status].label}
+            {post.pe_status === 'scheduled' && post.pe_scheduled_for
+              ? ` ${shortDate(post.pe_scheduled_for)}`
+              : ''}
+          </span>
+        )}
+        {/* Manual marked-as-published path (Phase 4) */}
+        {post.status === 'published' && post.published_at && !post.pe_status && (
           <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
             📅 Publié {shortDate(post.published_at)}
           </span>

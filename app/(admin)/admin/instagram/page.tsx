@@ -22,7 +22,7 @@ export default async function InstagramKanban({
   const { data } = await supabase
     .from('ig_posts')
     .select(
-      'id, status, content_type, slides_json, generated_at, slide_image_urls, published_at, ig_permalink, ig_angles(axis)'
+      'id, status, content_type, slides_json, generated_at, slide_image_urls, published_at, ig_permalink, pe_status, pe_scheduled_for, ig_angles(axis)'
     )
     .in(
       'status',
