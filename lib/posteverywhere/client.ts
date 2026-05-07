@@ -117,15 +117,26 @@ export async function uploadMedia(
   // Step 2: upload the bytes to the presigned URL.
   // The upload_url is on a different domain (e.g. upload.posteverywhere.ai)
   // and does not need the API Bearer auth — it's pre-authenticated.
+  // Bound the upload at 30s: without an AbortController, a hung PUT would
+  // sit there until the whole Vercel function times out (60s on Hobby),
+  // taking down all 10 parallel uploads with it.
   const fieldName = upload_method?.field_name || 'file'
   const formData = new FormData()
   const blob = new Blob([new Uint8Array(buffer)], { type: mimeType })
   formData.append(fieldName, blob, filename)
 
-  const uploadRes = await fetch(upload_url, {
-    method: upload_method?.method || 'POST',
-    body: formData
-  })
+  const uploadController = new AbortController()
+  const uploadTimeout = setTimeout(() => uploadController.abort(), 30000)
+  let uploadRes: Response
+  try {
+    uploadRes = await fetch(upload_url, {
+      method: upload_method?.method || 'POST',
+      body: formData,
+      signal: uploadController.signal
+    })
+  } finally {
+    clearTimeout(uploadTimeout)
+  }
 
   if (!uploadRes.ok) {
     const text = await uploadRes.text().catch(() => '')

@@ -4,7 +4,10 @@ import { cookies } from 'next/headers'
 import { getServerSupabase } from '@/lib/supabase/server'
 import { publishToPostEverywhere, type Platform } from '@/lib/posteverywhere/publisher'
 
-export const maxDuration = 300
+// Vercel Hobby caps function duration at 60s regardless of declared value.
+// Setting 60 explicitly so the code matches real runtime budget.
+export const maxDuration = 60
+export const dynamic = 'force-dynamic'
 
 const ADMIN_EMAIL = 'corporate.lupo@gmail.com'
 

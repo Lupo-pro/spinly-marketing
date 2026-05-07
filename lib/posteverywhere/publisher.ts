@@ -109,6 +109,8 @@ export async function publishToPostEverywhere(
 }> {
   const supabase = getServerSupabase()
 
+  const t0 = Date.now()
+
   try {
     if (!post.slide_image_urls || post.slide_image_urls.length === 0) {
       return { ok: false, error: 'No rendered slides found. Render before publishing.' }
@@ -123,10 +125,15 @@ export async function publishToPostEverywhere(
     }
 
     console.log(
-      `[publisher] Uploading ${post.slide_image_urls.length} slide(s) to PostEverywhere…`
+      `[publisher] start postId=${post.id} slides=${post.slide_image_urls.length} type=${post.content_type}`
     )
+
+    const tBeforeUploads = Date.now()
     const mediaIds = await uploadSlides(post.slide_image_urls)
-    console.log(`[publisher] Got ${mediaIds.length} media_ids`)
+    const tAfterUploads = Date.now()
+    console.log(
+      `[publisher] uploads ok mediaCount=${mediaIds.length} elapsedMs=${tAfterUploads - tBeforeUploads}`
+    )
 
     const fullCaption = buildCaptionWithTags(post)
 
@@ -141,8 +148,12 @@ export async function publishToPostEverywhere(
       params.scheduled_for = options.scheduledFor
     }
 
-    console.log(`[publisher] Creating PE post on platforms: ${platforms.join(', ')}`)
+    console.log(`[publisher] createPost platforms=${platforms.join(',')}`)
     const created = await createPost(params)
+    const tAfterCreate = Date.now()
+    console.log(
+      `[publisher] createPost ok pe_post_id=${created.post_id} status=${created.status} elapsedMs=${tAfterCreate - tAfterUploads}`
+    )
 
     await supabase
       .from('ig_posts')
@@ -156,6 +167,7 @@ export async function publishToPostEverywhere(
       })
       .eq('id', post.id)
 
+    console.log(`[publisher] DONE postId=${post.id} totalMs=${Date.now() - t0}`)
     return {
       ok: true,
       pe_post_id: created.post_id,
@@ -163,7 +175,9 @@ export async function publishToPostEverywhere(
     }
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err)
-    console.error('[publisher] Publish failed:', errorMsg)
+    console.error(
+      `[publisher] FAIL postId=${post.id} elapsedMs=${Date.now() - t0} error=${errorMsg}`
+    )
     await supabase
       .from('ig_posts')
       .update({ pe_status: 'failed', pe_error: errorMsg })
