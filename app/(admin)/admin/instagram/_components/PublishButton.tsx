@@ -108,6 +108,29 @@ export default function PublishButton({
     )
   }
 
+  // Failed: PE may have actually shipped the post despite our error (their
+  // dispatch is async — the function timed out client-side but their queue
+  // kept going). Force the user to confirm + reset before retrying so we
+  // don't double-publish on Instagram.
+  if (peStatus === 'failed') {
+    const badge = STATUS_BADGE.failed
+    return (
+      <div className="space-y-3">
+        <span className={`text-xs px-2 py-1 rounded border ${badge.cls}`}>{badge.label}</span>
+        {peError && (
+          <div className="text-xs px-3 py-2 rounded border border-rose-500/30 bg-rose-500/10 text-rose-300">
+            {peError}
+          </div>
+        )}
+        <p className="text-xs text-zinc-500">
+          ⚠️ PostEverywhere peut avoir publié quand même côté serveur. Vérifie sur Instagram. Une fois confirmé,{' '}
+          <strong>Reset state</strong> pour pouvoir republier sans dupliquer.
+        </p>
+        <ResetStateButton postId={postId} />
+      </div>
+    )
+  }
+
   // No published state yet — show publish button (or gate with reasons)
   if (status !== 'approved') {
     return <p className="text-sm text-zinc-500">Approuve le post avant de publier.</p>
@@ -151,12 +174,6 @@ export default function PublishButton({
 
   return (
     <div className="space-y-3">
-      {peStatus === 'failed' && peError && (
-        <div className="text-xs px-3 py-2 rounded border border-rose-500/30 bg-rose-500/10 text-rose-300">
-          ❌ Échec précédent : {peError}
-        </div>
-      )}
-
       {!open ? (
         <button
           type="button"
@@ -238,6 +255,54 @@ export default function PublishButton({
           {error && <p className="text-rose-400 text-sm">❌ {error}</p>}
         </div>
       )}
+    </div>
+  )
+}
+
+function ResetStateButton({ postId }: { postId: string }) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  function reset() {
+    if (
+      !confirm(
+        'Reset state PostEverywhere ? Tous les pe_* fields seront vidés. À ne faire que si tu as confirmé sur Instagram qu\'aucun post n\'a été publié (ou que tu as supprimé les doublons).'
+      )
+    ) {
+      return
+    }
+    setError(null)
+    startTransition(async () => {
+      try {
+        const res = await fetch('/api/ig/reset-pe-state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId })
+        })
+        const data = await res.json()
+        if (!res.ok || !data.ok) {
+          setError(data.error || `HTTP ${res.status}`)
+          return
+        }
+        router.refresh()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err))
+      }
+    })
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={reset}
+        disabled={isPending}
+        className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300 text-sm font-medium transition disabled:opacity-50"
+      >
+        {isPending ? 'Reset…' : 'Reset state'}
+      </button>
+      {error && <p className="text-xs text-rose-400 mt-1">{error}</p>}
     </div>
   )
 }

@@ -56,9 +56,17 @@ export async function POST(req: Request) {
       { status: 400 }
     )
   }
-  if (post.pe_status === 'published' || post.pe_status === 'scheduled') {
+  // Anti-duplicate guard: if PE already saw this post (any status), block.
+  // Even 'failed' is blocked because PostEverywhere's createPost is async on
+  // their side — a Vercel-side timeout can fire while their queue keeps
+  // processing, so a naive retry creates duplicates on Instagram.
+  // Use Reset State (calls /api/ig/reset-pe-state) to clear pe_* fields
+  // before retrying intentionally.
+  if (post.pe_post_id) {
     return NextResponse.json(
-      { error: `Post already ${post.pe_status}` },
+      {
+        error: `Post already sent to PostEverywhere (pe_status=${post.pe_status}). Reset state before retrying.`
+      },
       { status: 400 }
     )
   }
