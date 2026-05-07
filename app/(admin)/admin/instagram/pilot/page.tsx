@@ -4,15 +4,21 @@ import PilotValidator, { type PilotPost } from '../_components/PilotValidator'
 import { SPINLY_BRAND } from '../_styles/brand'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const fetchCache = 'force-no-store'
 
 export default async function PilotPage() {
   const supabase = getServerSupabase()
+  // Strict filter: only true drafts that aren't currently being processed.
+  // Without the pilot_processing guard, a post locked by approve-pilot a few
+  // hundred ms ago would still surface here and trigger a 409 on retry.
   const { data: posts } = await supabase
     .from('ig_posts')
     .select(
       'id, status, content_type, slides_json, generated_at, slide_image_urls, caption, hashtags, ig_angles(axis, hook)'
     )
     .eq('status', 'draft')
+    .eq('pilot_processing', false)
     .order('generated_at', { ascending: true })
     .limit(20)
 

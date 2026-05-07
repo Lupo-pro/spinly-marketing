@@ -1,9 +1,21 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { SPINLY_BRAND } from '../_styles/brand'
+
+// Race-condition errors we treat as no-ops (the post was already locked).
+function isBenignDuplicate(error: string | undefined | null): boolean {
+  if (!error) return false
+  const lc = error.toLowerCase()
+  return (
+    lc.includes('already approved') ||
+    lc.includes('already rejected') ||
+    lc.includes('already processing') ||
+    lc.includes('concurrent approve')
+  )
+}
 
 export interface PilotPost {
   id: string
@@ -166,9 +178,12 @@ function PostPreview({ post }: { post: PilotPost }) {
   )
 }
 
-export default function PilotValidator({ posts }: { posts: PilotPost[] }) {
+export default function PilotValidator({ posts: initialPosts }: { posts: PilotPost[] }) {
   const router = useRouter()
-  const [currentIndex, setCurrentIndex] = useState(0)
+  // Track every post the user has acted on this session. Once an ID lands
+  // here it can never re-surface in the swipe queue, even if the server
+  // refresh races and re-includes it for a moment.
+  const [processedIds, setProcessedIds] = useState<Set<string>>(new Set())
   const [stats, setStats] = useState<Stats>({
     approved: 0,
     rejected: 0,
@@ -178,7 +193,15 @@ export default function PilotValidator({ posts }: { posts: PilotPost[] }) {
   })
   const [toasts, setToasts] = useState<Toast[]>([])
 
-  const post = posts[currentIndex]
+  // The visible queue: server list minus anything already swiped.
+  const remainingPosts = useMemo(
+    () => initialPosts.filter((p) => !processedIds.has(p.id)),
+    [initialPosts, processedIds]
+  )
+  // Always validate from the head of the remaining queue. No currentIndex —
+  // skipping just appends to processedIds with a 'skipped' marker so the
+  // post drops out and the next one slides up.
+  const post = remainingPosts[0]
 
   const showToast = useCallback((message: string, type: 'error' | 'success' = 'error') => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
@@ -188,28 +211,33 @@ export default function PilotValidator({ posts }: { posts: PilotPost[] }) {
     }, 5000)
   }, [])
 
-  const goNext = useCallback(() => {
-    if (currentIndex < posts.length - 1) {
-      setCurrentIndex((i) => i + 1)
-    } else {
-      // Out of posts in this batch — refresh server data so we either show
-      // newly arrived drafts or the empty state.
-      router.refresh()
-    }
-  }, [currentIndex, posts.length, router])
+  const consumeId = useCallback((id: string) => {
+    setProcessedIds((s) => {
+      const next = new Set(s)
+      next.add(id)
+      return next
+    })
+  }, [])
+
+  const handleRefreshQueue = useCallback(() => {
+    // Forget what we processed locally and re-pull the server list. Useful
+    // when a fresh batch was generated mid-session.
+    setProcessedIds(new Set())
+    router.refresh()
+  }, [router])
 
   const handleApprove = useCallback(() => {
     if (!post) return
     const targetId = post.id
 
-    // Optimistic UI: bump counters and advance immediately. The async fetch
-    // below corrects the stats if the lock fails.
+    // Drop the post from the queue immediately — it will never resurface
+    // even if the server response is delayed or the server refreshes.
+    consumeId(targetId)
     setStats((s) => ({
       ...s,
       approved: s.approved + 1,
       processing: s.processing + 1
     }))
-    goNext()
 
     fetch('/api/ig/approve-pilot', {
       method: 'POST',
@@ -220,18 +248,24 @@ export default function PilotValidator({ posts }: { posts: PilotPost[] }) {
       .then(async (res) => {
         const data = await res.json().catch(() => ({}))
         if (!res.ok || !data.ok) {
-          // Roll the optimistic update back.
+          const errMsg = data?.error ?? `HTTP ${res.status}`
+          if (isBenignDuplicate(errMsg)) {
+            // Race condition: backend says it was already approved/locked.
+            // The ID stays in processedIds either way — that's the right
+            // outcome from the user's POV. Just close out the spinner.
+            console.log(`[pilot] ${targetId} benign dup: ${errMsg}`)
+            setStats((s) => ({ ...s, processing: Math.max(0, s.processing - 1) }))
+            return
+          }
           setStats((s) => ({
             ...s,
             approved: Math.max(0, s.approved - 1),
             processing: Math.max(0, s.processing - 1),
             failed: s.failed + 1
           }))
-          showToast(`Échec approbation : ${data?.error ?? `HTTP ${res.status}`}`, 'error')
+          showToast(`Échec approbation : ${errMsg}`, 'error')
           return
         }
-        // Lock acquired → background worker dispatched. Decrement processing
-        // a beat later to give visual feedback that something was handed off.
         setTimeout(() => {
           setStats((s) => ({ ...s, processing: Math.max(0, s.processing - 1) }))
         }, 1500)
@@ -245,14 +279,14 @@ export default function PilotValidator({ posts }: { posts: PilotPost[] }) {
         }))
         showToast(`Erreur réseau : ${err instanceof Error ? err.message : String(err)}`, 'error')
       })
-  }, [post, goNext, showToast])
+  }, [post, consumeId, showToast])
 
   const handleReject = useCallback(() => {
     if (!post) return
     const targetId = post.id
 
+    consumeId(targetId)
     setStats((s) => ({ ...s, rejected: s.rejected + 1 }))
-    goNext()
 
     fetch('/api/ig/reject', {
       method: 'POST',
@@ -263,12 +297,17 @@ export default function PilotValidator({ posts }: { posts: PilotPost[] }) {
       .then(async (res) => {
         if (!res.ok) {
           const data = await res.json().catch(() => ({}))
+          const errMsg = data?.error ?? `HTTP ${res.status}`
+          if (isBenignDuplicate(errMsg)) {
+            console.log(`[pilot] ${targetId} reject benign dup: ${errMsg}`)
+            return
+          }
           setStats((s) => ({
             ...s,
             rejected: Math.max(0, s.rejected - 1),
             failed: s.failed + 1
           }))
-          showToast(`Échec rejet : ${data?.error ?? `HTTP ${res.status}`}`, 'error')
+          showToast(`Échec rejet : ${errMsg}`, 'error')
         }
       })
       .catch((err) => {
@@ -279,13 +318,13 @@ export default function PilotValidator({ posts }: { posts: PilotPost[] }) {
         }))
         showToast(`Erreur réseau : ${err instanceof Error ? err.message : String(err)}`, 'error')
       })
-  }, [post, goNext, showToast])
+  }, [post, consumeId, showToast])
 
   const handleSkip = useCallback(() => {
     if (!post) return
+    consumeId(post.id)
     setStats((s) => ({ ...s, skipped: s.skipped + 1 }))
-    goNext()
-  }, [post, goNext])
+  }, [post, consumeId])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -309,7 +348,7 @@ export default function PilotValidator({ posts }: { posts: PilotPost[] }) {
   if (!post) {
     return (
       <>
-        <NoPostsScreen stats={stats} />
+        <NoPostsScreen stats={stats} onRefresh={handleRefreshQueue} />
         <ToastStack toasts={toasts} />
       </>
     )
@@ -342,7 +381,7 @@ export default function PilotValidator({ posts }: { posts: PilotPost[] }) {
             }}
           >
             <span>
-              POST {currentIndex + 1} / {posts.length}
+              POST {processedIds.size + 1} / {initialPosts.length}
             </span>
             <StatsLine stats={stats} />
           </div>
@@ -530,7 +569,7 @@ function ToastStack({ toasts }: { toasts: Toast[] }) {
   )
 }
 
-function NoPostsScreen({ stats }: { stats: Stats }) {
+function NoPostsScreen({ stats, onRefresh }: { stats: Stats; onRefresh: () => void }) {
   return (
     <div
       style={{
@@ -552,10 +591,10 @@ function NoPostsScreen({ stats }: { stats: Stats }) {
           margin: 0
         }}
       >
-        Inbox zéro
+        Tout est validé !
       </h2>
       <p style={{ color: SPINLY_BRAND.text.secondary, margin: 0, fontSize: 14, textAlign: 'center' }}>
-        Tous les drafts sont passés. Cette session :{' '}
+        Cette session :{' '}
         <span style={{ color: '#4ADE80', fontWeight: 700 }}>✓ {stats.approved}</span> approuvés ·{' '}
         <span style={{ color: '#EF4444', fontWeight: 700 }}>✕ {stats.rejected}</span> rejetés ·{' '}
         ⏭ {stats.skipped} skipped.
@@ -574,20 +613,39 @@ function NoPostsScreen({ stats }: { stats: Stats }) {
           </>
         )}
       </p>
-      <Link
-        href="/admin/instagram/calendar"
-        style={{
-          background: SPINLY_BRAND.gradientWarm,
-          color: '#FFF',
-          padding: '10px 18px',
-          borderRadius: 10,
-          fontSize: 13,
-          fontWeight: 700,
-          textDecoration: 'none'
-        }}
-      >
-        📅 Voir le calendrier
-      </Link>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <button
+          type="button"
+          onClick={onRefresh}
+          style={{
+            background: SPINLY_BRAND.gradientWarm,
+            color: '#FFF',
+            padding: '10px 18px',
+            borderRadius: 10,
+            fontSize: 13,
+            fontWeight: 700,
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          🔄 Recharger la liste
+        </button>
+        <Link
+          href="/admin/instagram/calendar"
+          style={{
+            background: SPINLY_BRAND.bg.surface,
+            border: `1px solid ${SPINLY_BRAND.border.default}`,
+            color: SPINLY_BRAND.text.primary,
+            padding: '10px 18px',
+            borderRadius: 10,
+            fontSize: 13,
+            fontWeight: 700,
+            textDecoration: 'none'
+          }}
+        >
+          📅 Voir le calendrier
+        </Link>
+      </div>
     </div>
   )
 }
