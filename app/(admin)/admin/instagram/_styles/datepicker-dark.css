@@ -1,0 +1,84 @@
+/* Dark-mode overrides for react-day-picker v9 inside the Spinly Content Studio.
+   Scoped to .spinly-rdp-wrapper so the calendar styling never leaks elsewhere. */
+
+.spinly-rdp-wrapper {
+  --rdp-accent-color: #f59e2c;
+  --rdp-accent-background-color: rgba(245, 158, 44, 0.18);
+  --rdp-day-height: 36px;
+  --rdp-day-width: 36px;
+  --rdp-today-color: #f59e2c;
+  --rdp-selected-border: 0;
+  --rdp-range_middle-background-color: rgba(245, 158, 44, 0.18);
+  color: #ffffff;
+}
+
+.spinly-rdp-wrapper .rdp-root {
+  --rdp-day_button-border-radius: 8px;
+  --rdp-day_button-height: 32px;
+  --rdp-day_button-width: 32px;
+}
+
+.spinly-rdp-wrapper .rdp-month_caption,
+.spinly-rdp-wrapper .rdp-caption_label {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.spinly-rdp-wrapper .rdp-weekday {
+  color: #888;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.spinly-rdp-wrapper .rdp-day {
+  color: #ffffff;
+}
+
+.spinly-rdp-wrapper .rdp-day_button {
+  background: transparent;
+  border: none;
+  color: inherit;
+}
+
+.spinly-rdp-wrapper .rdp-day_button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.spinly-rdp-wrapper .rdp-today .rdp-day_button {
+  font-weight: 700;
+  color: #f59e2c;
+}
+
+.spinly-rdp-wrapper .rdp-selected .rdp-day_button {
+  background: linear-gradient(95deg, #f59e2c 0%, #ff4500 100%);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.spinly-rdp-wrapper .rdp-disabled,
+.spinly-rdp-wrapper .rdp-day_disabled {
+  color: #444;
+  opacity: 0.5;
+}
+
+.spinly-rdp-wrapper .rdp-outside {
+  color: #555;
+  opacity: 0.6;
+}
+
+.spinly-rdp-wrapper .rdp-button_previous,
+.spinly-rdp-wrapper .rdp-button_next {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+}
+
+.spinly-rdp-wrapper .rdp-button_previous:hover,
+.spinly-rdp-wrapper .rdp-button_next:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.spinly-rdp-wrapper .rdp-chevron {
+  fill: currentColor;
+}

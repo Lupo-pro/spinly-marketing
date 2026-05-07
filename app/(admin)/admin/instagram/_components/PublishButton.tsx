@@ -1,15 +1,19 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { format } from 'date-fns'
+import { fr } from 'date-fns/locale'
+import DatePicker from './DatePicker'
+import { SPINLY_BRAND } from '../_styles/brand'
 
-const ALL_PLATFORMS: { key: string; label: string }[] = [
-  { key: 'instagram', label: '📷 Instagram' },
-  { key: 'facebook', label: '👥 Facebook' },
-  { key: 'threads', label: '🧵 Threads' },
-  { key: 'tiktok', label: '🎵 TikTok' },
-  { key: 'linkedin', label: '💼 LinkedIn' },
-  { key: 'x', label: '🐦 X' }
+const ALL_PLATFORMS: { key: string; icon: string; label: string }[] = [
+  { key: 'instagram', icon: '📷', label: 'Instagram' },
+  { key: 'facebook', icon: '👥', label: 'Facebook' },
+  { key: 'threads', icon: '🧵', label: 'Threads' },
+  { key: 'tiktok', icon: '🎵', label: 'TikTok' },
+  { key: 'linkedin', icon: '💼', label: 'LinkedIn' },
+  { key: 'x', icon: '🐦', label: 'X' }
 ]
 
 interface Props {
@@ -23,13 +27,26 @@ interface Props {
   peDestinations: { platform: string; status: string; permalink?: string }[] | null
 }
 
-const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  queued: { label: '⏳ En attente', cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
-  scheduled: { label: '📅 Programmé', cls: 'bg-sky-500/15 text-sky-300 border-sky-500/30' },
-  publishing: { label: '🔄 Publication…', cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
-  published: { label: '✅ Publié', cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
-  partial: { label: '⚠️ Partiel', cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
-  failed: { label: '❌ Échec', cls: 'bg-rose-500/15 text-rose-300 border-rose-500/30' }
+function StatusPill({ peStatus }: { peStatus: string }) {
+  const badge =
+    SPINLY_BRAND.status[peStatus as keyof typeof SPINLY_BRAND.status] ?? SPINLY_BRAND.status.draft
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        background: badge.bg,
+        color: badge.fg,
+        padding: '4px 10px',
+        borderRadius: 8,
+        fontSize: 12,
+        fontWeight: 600
+      }}
+    >
+      {badge.label}
+    </span>
+  )
 }
 
 export default function PublishButton({
@@ -43,31 +60,58 @@ export default function PublishButton({
   peDestinations
 }: Props) {
   const router = useRouter()
-  const [open, setOpen] = useState(false)
   const [platforms, setPlatforms] = useState<string[]>(
     contentType === 'story' ? ['instagram'] : ['instagram', 'facebook']
   )
-  const [scheduledLocal, setScheduledLocal] = useState<string>('')
+  const [scheduledAt, setScheduledAt] = useState<Date | null>(null)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const inFlight = useRef(false) // belt-and-suspenders against double-clicks
 
-  // Already in a "done or in flight" state — show status, no publish button
+  function publish() {
+    if (inFlight.current || isPending) return
+    setError(null)
+
+    const scheduledFor = scheduledAt ? scheduledAt.toISOString() : undefined
+
+    inFlight.current = true
+    startTransition(async () => {
+      try {
+        const res = await fetch('/api/ig/publish-pe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId, platforms, scheduledFor })
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || !data.ok) {
+          setError(data.error || `HTTP ${res.status}`)
+          return
+        }
+        router.refresh()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err))
+      } finally {
+        inFlight.current = false
+      }
+    })
+  }
+
+  // ───── Terminal / in-flight states ─────
   if (peStatus === 'published' || peStatus === 'partial') {
-    const badge = STATUS_BADGE[peStatus]
     return (
-      <div className="space-y-2">
-        <span className={`text-xs px-2 py-1 rounded border ${badge.cls}`}>{badge.label}</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <StatusPill peStatus={peStatus} />
         {peDestinations && peDestinations.length > 0 && (
-          <ul className="text-xs text-zinc-400 space-y-1">
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
             {peDestinations.map((d, i) => (
-              <li key={i}>
+              <li key={i} style={{ fontSize: 12, color: SPINLY_BRAND.text.secondary }}>
                 {d.platform} —{' '}
                 {d.permalink ? (
                   <a
                     href={d.permalink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="underline hover:text-zinc-200"
+                    style={{ color: SPINLY_BRAND.text.primary, textDecoration: 'underline' }}
                   >
                     {d.status}
                   </a>
@@ -84,14 +128,14 @@ export default function PublishButton({
   }
 
   if (peStatus === 'scheduled' && peScheduledFor) {
-    const badge = STATUS_BADGE.scheduled
-    const d = new Date(peScheduledFor)
     return (
-      <div className="space-y-2">
-        <span className={`text-xs px-2 py-1 rounded border ${badge.cls}`}>{badge.label}</span>
-        <p className="text-sm text-zinc-300">
-          Pour le {d.toLocaleDateString('fr-FR')} à{' '}
-          {d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <StatusPill peStatus={peStatus} />
+        <p style={{ fontSize: 13, color: SPINLY_BRAND.text.primary, margin: 0 }}>
+          Programmé pour le{' '}
+          <strong>
+            {format(new Date(peScheduledFor), "EEEE d MMMM 'à' HH:mm", { locale: fr })}
+          </strong>
         </p>
         <RefreshStatusButton postId={postId} />
       </div>
@@ -99,161 +143,157 @@ export default function PublishButton({
   }
 
   if (peStatus === 'queued' || peStatus === 'publishing') {
-    const badge = STATUS_BADGE[peStatus]
     return (
-      <div className="space-y-2">
-        <span className={`text-xs px-2 py-1 rounded border ${badge.cls}`}>{badge.label}</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <StatusPill peStatus={peStatus} />
+        <p style={{ fontSize: 12, color: SPINLY_BRAND.text.secondary, margin: 0 }}>
+          La page se rafraîchit automatiquement toutes les 15 secondes.
+        </p>
         <RefreshStatusButton postId={postId} />
       </div>
     )
   }
 
-  // Failed: PE may have actually shipped the post despite our error (their
-  // dispatch is async — the function timed out client-side but their queue
-  // kept going). Force the user to confirm + reset before retrying so we
-  // don't double-publish on Instagram.
   if (peStatus === 'failed') {
-    const badge = STATUS_BADGE.failed
     return (
-      <div className="space-y-3">
-        <span className={`text-xs px-2 py-1 rounded border ${badge.cls}`}>{badge.label}</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <StatusPill peStatus="failed" />
         {peError && (
-          <div className="text-xs px-3 py-2 rounded border border-rose-500/30 bg-rose-500/10 text-rose-300">
+          <div
+            style={{
+              fontSize: 12,
+              padding: '8px 12px',
+              borderRadius: 8,
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              background: 'rgba(239, 68, 68, 0.1)',
+              color: '#FCA5A5'
+            }}
+          >
             {peError}
           </div>
         )}
-        <p className="text-xs text-zinc-500">
-          ⚠️ PostEverywhere peut avoir publié quand même côté serveur. Vérifie sur Instagram. Une fois confirmé,{' '}
-          <strong>Reset state</strong> pour pouvoir republier sans dupliquer.
+        <p style={{ fontSize: 12, color: SPINLY_BRAND.text.secondary, margin: 0 }}>
+          ⚠️ PostEverywhere peut avoir publié quand même côté serveur. Vérifie sur
+          Instagram. Une fois confirmé, <strong>Reset state</strong> pour pouvoir
+          republier sans dupliquer.
         </p>
         <ResetStateButton postId={postId} />
       </div>
     )
   }
 
-  // No published state yet — show publish button (or gate with reasons)
+  // ───── Gates ─────
   if (status !== 'approved') {
-    return <p className="text-sm text-zinc-500">Approuve le post avant de publier.</p>
+    return (
+      <p style={{ fontSize: 13, color: SPINLY_BRAND.text.secondary, margin: 0 }}>
+        Approuve le post avant de publier.
+      </p>
+    )
   }
   if (!hasRendered) {
-    return <p className="text-sm text-zinc-500">Render les visuels avant de publier.</p>
+    return (
+      <p style={{ fontSize: 13, color: SPINLY_BRAND.text.secondary, margin: 0 }}>
+        Render les visuels avant de publier.
+      </p>
+    )
   }
 
-  function publish() {
-    setError(null)
-    // Convert local datetime-local input to UTC ISO for the API
-    let scheduledFor: string | undefined
-    if (scheduledLocal) {
-      const d = new Date(scheduledLocal)
-      if (Number.isNaN(d.getTime())) {
-        setError('Date invalide')
-        return
-      }
-      scheduledFor = d.toISOString()
-    }
-
-    startTransition(async () => {
-      try {
-        const res = await fetch('/api/ig/publish-pe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ postId, platforms, scheduledFor })
-        })
-        const data = await res.json()
-        if (!res.ok || !data.ok) {
-          setError(data.error || `HTTP ${res.status}`)
-          return
-        }
-        router.refresh()
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        setError(msg)
-      }
-    })
-  }
+  // ───── Publish form ─────
+  const buttonLabel = isPending
+    ? '⏳ Publication en cours… (peut prendre 30-50s)'
+    : scheduledAt
+      ? '📅 Programmer la publication'
+      : '🚀 Publier maintenant'
 
   return (
-    <div className="space-y-3">
-      {!open ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:opacity-90 rounded-lg text-white font-medium transition"
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div>
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: 1,
+            color: SPINLY_BRAND.text.secondary,
+            textTransform: 'uppercase',
+            marginBottom: 8
+          }}
         >
-          🚀 Publier sur les réseaux
-        </button>
-      ) : (
-        <div className="border border-zinc-800 rounded-lg p-4 space-y-4 bg-zinc-900/40">
-          <div>
-            <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">
-              Plateformes
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {ALL_PLATFORMS.map(({ key, label }) => (
-                <label
-                  key={key}
-                  className="flex items-center gap-2 cursor-pointer text-sm px-3 py-1.5 rounded border border-zinc-800 hover:border-zinc-600 bg-zinc-950"
-                >
-                  <input
-                    type="checkbox"
-                    checked={platforms.includes(key)}
-                    onChange={(e) => {
-                      if (e.target.checked) setPlatforms([...platforms, key])
-                      else setPlatforms(platforms.filter((p) => p !== key))
-                    }}
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
-            <p className="text-xs text-zinc-500 mt-2">
-              Coches uniquement les plateformes connectées dans PostEverywhere.
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">
-              Programmer (optionnel)
-            </label>
-            <input
-              type="datetime-local"
-              value={scheduledLocal}
-              onChange={(e) => setScheduledLocal(e.target.value)}
-              className="px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 focus:outline-none focus:border-zinc-600"
-            />
-            <p className="text-xs text-zinc-500 mt-1">
-              Vide = publier maintenant.
-            </p>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={publish}
-              disabled={isPending || platforms.length === 0}
-              className="px-4 py-2 bg-emerald-500 text-zinc-950 rounded-lg text-sm font-medium hover:bg-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed transition"
-            >
-              {isPending
-                ? 'Envoi…'
-                : scheduledLocal
-                  ? '📅 Programmer'
-                  : '🚀 Publier maintenant'}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false)
-                setError(null)
-              }}
-              disabled={isPending}
-              className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-zinc-300 text-sm font-medium transition"
-            >
-              Annuler
-            </button>
-          </div>
-
-          {error && <p className="text-rose-400 text-sm">❌ {error}</p>}
+          Plateformes
         </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {ALL_PLATFORMS.map(({ key, icon, label }) => {
+            const active = platforms.includes(key)
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  if (active) setPlatforms(platforms.filter((p) => p !== key))
+                  else setPlatforms([...platforms, key])
+                }}
+                style={{
+                  background: active ? 'rgba(245, 158, 44, 0.15)' : SPINLY_BRAND.bg.surface,
+                  border: `1px solid ${active ? SPINLY_BRAND.border.accent : SPINLY_BRAND.border.default}`,
+                  color: active ? '#F59E2C' : SPINLY_BRAND.text.primary,
+                  padding: '6px 12px',
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: active ? 600 : 500,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                <span>{icon}</span>
+                <span>{label}</span>
+              </button>
+            )
+          })}
+        </div>
+        <p style={{ fontSize: 11, color: SPINLY_BRAND.text.tertiary, margin: '6px 0 0' }}>
+          Coches uniquement les plateformes connectées dans PostEverywhere.
+        </p>
+      </div>
+
+      <div>
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: 1,
+            color: SPINLY_BRAND.text.secondary,
+            textTransform: 'uppercase',
+            marginBottom: 8
+          }}
+        >
+          Quand publier
+        </div>
+        <DatePicker value={scheduledAt} onChange={setScheduledAt} />
+      </div>
+
+      <button
+        type="button"
+        onClick={publish}
+        disabled={isPending || platforms.length === 0}
+        style={{
+          background: SPINLY_BRAND.gradientWarm,
+          border: 'none',
+          color: SPINLY_BRAND.text.primary,
+          padding: '14px 18px',
+          borderRadius: 12,
+          fontSize: 14,
+          fontWeight: 700,
+          cursor: isPending || platforms.length === 0 ? 'not-allowed' : 'pointer',
+          opacity: isPending || platforms.length === 0 ? 0.6 : 1,
+          transition: 'opacity 0.15s'
+        }}
+      >
+        {buttonLabel}
+      </button>
+
+      {error && (
+        <p style={{ color: '#FCA5A5', fontSize: 13, margin: 0 }}>❌ {error}</p>
       )}
     </div>
   )
@@ -267,7 +307,7 @@ function ResetStateButton({ postId }: { postId: string }) {
   function reset() {
     if (
       !confirm(
-        'Reset state PostEverywhere ? Tous les pe_* fields seront vidés. À ne faire que si tu as confirmé sur Instagram qu\'aucun post n\'a été publié (ou que tu as supprimé les doublons).'
+        "Reset state PostEverywhere ? Tous les pe_* fields seront vidés. À ne faire que si tu as confirmé sur Instagram qu'aucun post n'a été publié (ou que tu as supprimé les doublons)."
       )
     ) {
       return
@@ -280,7 +320,7 @@ function ResetStateButton({ postId }: { postId: string }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ postId })
         })
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         if (!res.ok || !data.ok) {
           setError(data.error || `HTTP ${res.status}`)
           return
@@ -298,11 +338,23 @@ function ResetStateButton({ postId }: { postId: string }) {
         type="button"
         onClick={reset}
         disabled={isPending}
-        className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300 text-sm font-medium transition disabled:opacity-50"
+        style={{
+          background: SPINLY_BRAND.bg.surface,
+          border: `1px solid ${SPINLY_BRAND.border.default}`,
+          color: SPINLY_BRAND.text.primary,
+          padding: '8px 14px',
+          borderRadius: 8,
+          fontSize: 13,
+          fontWeight: 500,
+          cursor: isPending ? 'not-allowed' : 'pointer',
+          opacity: isPending ? 0.5 : 1
+        }}
       >
         {isPending ? 'Reset…' : 'Reset state'}
       </button>
-      {error && <p className="text-xs text-rose-400 mt-1">{error}</p>}
+      {error && (
+        <p style={{ fontSize: 11, color: '#FCA5A5', margin: '6px 0 0' }}>{error}</p>
+      )}
     </div>
   )
 }
@@ -321,7 +373,7 @@ function RefreshStatusButton({ postId }: { postId: string }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ postId })
         })
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         if (!res.ok || !data.ok) {
           setError(data.error || `HTTP ${res.status}`)
           return
@@ -339,11 +391,22 @@ function RefreshStatusButton({ postId }: { postId: string }) {
         type="button"
         onClick={refresh}
         disabled={isPending}
-        className="text-xs text-zinc-400 hover:text-zinc-200 underline disabled:opacity-50"
+        style={{
+          fontSize: 12,
+          color: SPINLY_BRAND.text.secondary,
+          background: 'transparent',
+          border: 'none',
+          textDecoration: 'underline',
+          cursor: isPending ? 'not-allowed' : 'pointer',
+          opacity: isPending ? 0.5 : 1,
+          padding: 0
+        }}
       >
         {isPending ? 'Refresh…' : 'Refresh status'}
       </button>
-      {error && <p className="text-xs text-rose-400 mt-1">{error}</p>}
+      {error && (
+        <p style={{ fontSize: 11, color: '#FCA5A5', margin: '6px 0 0' }}>{error}</p>
+      )}
     </div>
   )
 }

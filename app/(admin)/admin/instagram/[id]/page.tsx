@@ -10,8 +10,10 @@ import DownloadSinglePngButton from '../_components/DownloadSinglePngButton'
 import CaptionBlock from '../_components/CaptionBlock'
 import MarkPublishedButton from '../_components/MarkPublishedButton'
 import PublishButton from '../_components/PublishButton'
+import PublishStatusTracker from '../_components/PublishStatusTracker'
 import PostActions from './_components/PostActions'
 import { updatePostContent } from '../actions'
+import { SPINLY_BRAND } from '../_styles/brand'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,13 +26,24 @@ const STATUS_LABEL: Record<string, string> = {
   failed: 'Failed'
 }
 
-const STATUS_COLOR: Record<string, string> = {
-  draft: 'bg-zinc-800 text-zinc-300 border-zinc-700',
-  approved: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-  scheduled: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
-  published: 'bg-violet-500/15 text-violet-300 border-violet-500/30',
-  rejected: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
-  failed: 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+const SECTION_BG = SPINLY_BRAND.bg.surface
+const SECTION_BORDER = `1px solid ${SPINLY_BRAND.border.default}`
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h2
+      style={{
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: 1.5,
+        color: SPINLY_BRAND.text.secondary,
+        textTransform: 'uppercase',
+        margin: '0 0 12px'
+      }}
+    >
+      {children}
+    </h2>
+  )
 }
 
 export default async function PostValidationPage({ params }: { params: { id: string } }) {
@@ -47,166 +60,323 @@ export default async function PostValidationPage({ params }: { params: { id: str
   const hashtags = (post.hashtags ?? []) as string[]
   const hashtagsString = hashtags.join(' ')
   const angle = Array.isArray(post.ig_angles) ? post.ig_angles[0] : post.ig_angles
-  const statusClass = STATUS_COLOR[post.status] ?? STATUS_COLOR.draft
   const slideUrls = (post.slide_image_urls ?? []) as string[]
   const contentType = (post.content_type ?? 'carousel') as 'carousel' | 'single_post' | 'story'
   const isCarousel = contentType === 'carousel'
   const isStory = contentType === 'story'
-  // single_post and story are both 1-slide formats; carousel is 10.
   const expectedSlides = isCarousel ? 10 : 1
   const hasRendered = slideUrls.length === expectedSlides
   const isReadyToPublish = post.status === 'approved' && hasRendered
 
-  const renderLabel = isCarousel ? 'Visuels rendus' : 'Visuel rendu'
-  const previewLabel = isCarousel ? '10 slides (texte)' : '1 slide (texte)'
+  const ctype = SPINLY_BRAND.contentType[contentType]
+  const statusBadge =
+    SPINLY_BRAND.status[post.status as keyof typeof SPINLY_BRAND.status] ??
+    SPINLY_BRAND.status.draft
+  const peBadge = post.pe_status
+    ? SPINLY_BRAND.status[post.pe_status as keyof typeof SPINLY_BRAND.status]
+    : null
+
   const titleLabel = isStory
     ? 'Validation story'
     : isCarousel
       ? 'Validation carrousel'
       : 'Validation post simple'
-  const typeBadge = isStory ? '📱 Story' : isCarousel ? '🎴 Carrousel' : '📷 Post simple'
+  const previewLabel = isCarousel ? '10 slides (texte)' : '1 slide (texte)'
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100 p-8">
-      <div className="max-w-6xl mx-auto">
-        <header className="flex items-center justify-between mb-8">
-          <div>
-            <Link href="/admin/instagram" className="text-sm text-zinc-500 hover:text-zinc-300">
-              ← Instagram
-            </Link>
-            <div className="flex items-center gap-3 mt-2 flex-wrap">
-              <h1 className="text-2xl font-bold">{titleLabel}</h1>
-              <span className={`text-xs px-2 py-1 rounded border ${statusClass}`}>
-                {STATUS_LABEL[post.status] ?? post.status}
-              </span>
-              <span className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
-                {typeBadge}
-              </span>
-            </div>
-            {angle && (
-              <p className="text-sm text-zinc-500 mt-1">
-                <span className="font-mono">{angle.axis}</span> · {angle.hook}
-              </p>
-            )}
+    <main
+      style={{
+        background: SPINLY_BRAND.bg.base,
+        minHeight: '100vh',
+        padding: 24,
+        fontFamily: 'var(--font-body), system-ui, -apple-system, sans-serif',
+        color: SPINLY_BRAND.text.primary
+      }}
+    >
+      <PublishStatusTracker postId={post.id} peStatus={post.pe_status ?? null} />
+
+      <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+        <div style={{ marginBottom: 12 }}>
+          <Link
+            href="/admin/instagram"
+            style={{
+              fontSize: 12,
+              color: SPINLY_BRAND.text.secondary,
+              textDecoration: 'none'
+            }}
+          >
+            ← Content Studio
+          </Link>
+        </div>
+
+        <header style={{ marginBottom: 24 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap'
+            }}
+          >
+            <h1
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 28,
+                fontWeight: 900,
+                letterSpacing: -0.5,
+                margin: 0
+              }}
+            >
+              {titleLabel}
+            </h1>
+            <Pill bg={ctype.bg} fg={ctype.fg} label={`${ctype.icon} ${ctype.label}`} />
+            <Pill bg={statusBadge.bg} fg={statusBadge.fg} label={statusBadge.label} />
+            {peBadge && <Pill bg={peBadge.bg} fg={peBadge.fg} label={peBadge.label} />}
           </div>
+          {angle && (
+            <p style={{ fontSize: 13, color: SPINLY_BRAND.text.secondary, margin: '8px 0 0' }}>
+              <span style={{ fontFamily: 'monospace' }}>{angle.axis}</span> · {angle.hook}
+            </p>
+          )}
         </header>
 
-        {isReadyToPublish && (
-          <div className="mb-6 px-4 py-3 bg-gradient-to-r from-orange-500/10 to-pink-500/10 border border-orange-500/30 rounded-lg">
-            <p className="text-orange-300 font-medium">
-              ✨ Prêt à publier —{' '}
-              {isCarousel
-                ? "télécharge le ZIP, colle dans Buffer/Later, programme l'heure."
-                : isStory
-                  ? "télécharge le PNG vertical et publie-le en story."
-                  : "télécharge le PNG, colle dans Buffer/Later, programme l'heure."}
+        {isReadyToPublish && !post.pe_status && (
+          <div
+            style={{
+              marginBottom: 16,
+              padding: '10px 14px',
+              background: 'rgba(255,255,255,0.02)',
+              border: SECTION_BORDER,
+              borderRadius: 10
+            }}
+          >
+            <p style={{ margin: 0, fontSize: 13, color: SPINLY_BRAND.text.primary }}>
+              ✨ Prêt à publier — utilise{' '}
+              <strong>Publication automatique</strong> ci-dessous (ou télécharge le{' '}
+              {isCarousel ? 'ZIP' : 'PNG'} en fallback).
             </p>
           </div>
         )}
 
-        <PostActions postId={post.id} status={post.status} />
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)',
+            gap: 24,
+            alignItems: 'start'
+          }}
+        >
+          {/* ───────── LEFT: PREVIEW ───────── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <section
+              style={{
+                background: SECTION_BG,
+                border: SECTION_BORDER,
+                borderRadius: 14,
+                padding: 18
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 14
+                }}
+              >
+                <SectionTitle>{isCarousel ? 'Visuels rendus' : 'Visuel rendu'}</SectionTitle>
+                <RenderButton postId={post.id} hasUrls={slideUrls.length > 0} />
+              </div>
+              <SlidesGrid urls={slideUrls} />
+            </section>
 
-        <section className="mt-8 mb-10">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
-              {renderLabel}
-            </h2>
-            <RenderButton postId={post.id} hasUrls={slideUrls.length > 0} />
+            <section
+              style={{
+                background: SECTION_BG,
+                border: SECTION_BORDER,
+                borderRadius: 14,
+                padding: 18
+              }}
+            >
+              <SectionTitle>{previewLabel}</SectionTitle>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                  gap: 12
+                }}
+              >
+                {slides.map((slide, i) => (
+                  <SlidePreview key={slide.n ?? i} slide={slide} />
+                ))}
+              </div>
+            </section>
           </div>
-          <SlidesGrid urls={slideUrls} />
-        </section>
 
-        <section className="mt-12 mb-10 bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <h2 className="text-2xl font-bold">Publication automatique</h2>
-            <span className="text-xs text-zinc-500">via PostEverywhere</span>
-          </div>
-          <PublishButton
-            postId={post.id}
-            status={post.status}
-            contentType={contentType}
-            hasRendered={hasRendered}
-            peStatus={post.pe_status ?? null}
-            peScheduledFor={post.pe_scheduled_for ?? null}
-            peError={post.pe_error ?? null}
-            peDestinations={post.pe_destinations ?? null}
-          />
-        </section>
+          {/* ───────── RIGHT: ACTIONS ───────── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <section
+              style={{
+                background: SECTION_BG,
+                border: SECTION_BORDER,
+                borderRadius: 14,
+                padding: 18
+              }}
+            >
+              <SectionTitle>Actions</SectionTitle>
+              <PostActions postId={post.id} status={post.status} />
+            </section>
 
-        <section className="mt-12 space-y-8">
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold">Publication manuelle</h2>
-            <span className="text-xs text-zinc-500">fallback : ZIP / PNG / Buffer</span>
-          </div>
+            <section
+              style={{
+                background: SECTION_BG,
+                border: `1px solid ${SPINLY_BRAND.border.accent}`,
+                borderRadius: 14,
+                padding: 18
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 14,
+                  gap: 8
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: SPINLY_BRAND.text.primary }}>
+                    Publication automatique
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: SPINLY_BRAND.text.secondary,
+                      marginTop: 2
+                    }}
+                  >
+                    via PostEverywhere · IG · FB · Threads · TikTok · LinkedIn · X
+                  </div>
+                </div>
+              </div>
+              <PublishButton
+                postId={post.id}
+                status={post.status}
+                contentType={contentType}
+                hasRendered={hasRendered}
+                peStatus={post.pe_status ?? null}
+                peScheduledFor={post.pe_scheduled_for ?? null}
+                peError={post.pe_error ?? null}
+                peDestinations={post.pe_destinations ?? null}
+              />
+            </section>
 
-          <div>
-            <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider mb-3">
-              1. Télécharge le fichier
-            </h3>
-            {isCarousel ? (
-              <>
-                <DownloadZipButton postId={post.id} hasRendered={hasRendered} />
-                <p className="text-xs text-zinc-500 mt-2">
-                  Le ZIP contient : 10 PNG dans l&apos;ordre + caption.txt + README avec instructions.
-                </p>
-              </>
-            ) : (
-              <>
-                <DownloadSinglePngButton
-                  postId={post.id}
-                  url={slideUrls[0] ?? null}
-                  hasRendered={hasRendered}
-                />
-                <p className="text-xs text-zinc-500 mt-2">
-                  {isStory
-                    ? '1 PNG vertical 1080×1920 prêt à publier en story Instagram.'
-                    : '1 PNG portrait 1080×1350 prêt à uploader sur Instagram.'}
-                </p>
-              </>
+            <PostEditForm
+              postId={post.id}
+              caption={post.caption}
+              hashtagsString={hashtagsString}
+            />
+
+            <details
+              style={{
+                background: SECTION_BG,
+                border: SECTION_BORDER,
+                borderRadius: 14,
+                padding: 18
+              }}
+            >
+              <summary
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: 1.5,
+                  color: SPINLY_BRAND.text.secondary,
+                  textTransform: 'uppercase',
+                  cursor: 'pointer'
+                }}
+              >
+                Publication manuelle (fallback)
+              </summary>
+              <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <div style={{ fontSize: 12, color: SPINLY_BRAND.text.secondary, marginBottom: 8 }}>
+                    1. Télécharge le fichier
+                  </div>
+                  {isCarousel ? (
+                    <DownloadZipButton postId={post.id} hasRendered={hasRendered} />
+                  ) : (
+                    <DownloadSinglePngButton
+                      postId={post.id}
+                      url={slideUrls[0] ?? null}
+                      hasRendered={hasRendered}
+                    />
+                  )}
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: SPINLY_BRAND.text.secondary, marginBottom: 8 }}>
+                    2. Copie le caption
+                  </div>
+                  <CaptionBlock caption={post.caption} hashtags={hashtags} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: SPINLY_BRAND.text.secondary, marginBottom: 8 }}>
+                    3. Une fois publié sur Instagram
+                  </div>
+                  <MarkPublishedButton
+                    postId={post.id}
+                    status={post.status}
+                    igPermalink={post.ig_permalink}
+                    hasRendered={hasRendered}
+                  />
+                </div>
+              </div>
+            </details>
+
+            {post.rejection_reason && (
+              <section
+                style={{
+                  padding: 14,
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  borderRadius: 12
+                }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#FCA5A5', marginBottom: 4 }}>
+                  Raison du rejet
+                </div>
+                <p style={{ fontSize: 13, color: '#FECACA', margin: 0 }}>{post.rejection_reason}</p>
+              </section>
             )}
           </div>
+        </div>
 
-          <div>
-            <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider mb-3">
-              2. Copie le caption
-            </h3>
-            <CaptionBlock caption={post.caption} hashtags={hashtags} />
-          </div>
-
-          <div>
-            <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider mb-3">
-              3. Une fois publié sur Instagram
-            </h3>
-            <MarkPublishedButton
-              postId={post.id}
-              status={post.status}
-              igPermalink={post.ig_permalink}
-              hasRendered={hasRendered}
-            />
-          </div>
-        </section>
-
-        <section className="mt-12 mb-10">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400 mb-4">
-            {previewLabel}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {slides.map((slide, i) => (
-              <SlidePreview key={slide.n ?? i} slide={slide} />
-            ))}
-          </div>
-        </section>
-
-        <PostEditForm postId={post.id} caption={post.caption} hashtagsString={hashtagsString} />
-
-        {post.rejection_reason && (
-          <section className="mt-6 p-4 border border-rose-500/30 bg-rose-500/10 rounded-lg">
-            <h3 className="text-sm font-semibold text-rose-300 mb-1">Raison du rejet</h3>
-            <p className="text-sm text-rose-200">{post.rejection_reason}</p>
-          </section>
-        )}
+        <div style={{ height: 40 }} />
+        <div style={{ fontSize: 12, color: STATUS_LABEL[post.status] ? SPINLY_BRAND.text.tertiary : 'transparent' }}>
+          ID : {post.id.slice(0, 8)}
+        </div>
       </div>
     </main>
+  )
+}
+
+function Pill({ bg, fg, label }: { bg: string; fg: string; label: string }) {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        background: bg,
+        color: fg,
+        padding: '4px 10px',
+        borderRadius: 8,
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: 0.5
+      }}
+    >
+      {label}
+    </span>
   )
 }
 
@@ -221,34 +391,85 @@ function PostEditForm({
 }) {
   const update = updatePostContent.bind(null, postId)
   return (
-    <section className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400 mb-4">
-        Caption + Hashtags (édition)
-      </h2>
-      <form action={update} className="space-y-4">
+    <section
+      style={{
+        background: SECTION_BG,
+        border: SECTION_BORDER,
+        borderRadius: 14,
+        padding: 18
+      }}
+    >
+      <SectionTitle>Caption + hashtags</SectionTitle>
+      <form action={update} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div>
-          <label className="block text-xs text-zinc-500 mb-1">Caption</label>
+          <label
+            style={{
+              display: 'block',
+              fontSize: 11,
+              color: SPINLY_BRAND.text.secondary,
+              marginBottom: 4
+            }}
+          >
+            Caption
+          </label>
           <textarea
             name="caption"
             defaultValue={caption}
-            rows={10}
-            className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 font-mono focus:outline-none focus:border-zinc-600"
+            rows={8}
+            style={{
+              width: '100%',
+              background: '#0F0F0F',
+              border: `1px solid ${SPINLY_BRAND.border.default}`,
+              borderRadius: 8,
+              padding: '8px 10px',
+              fontSize: 12,
+              fontFamily: 'monospace',
+              color: SPINLY_BRAND.text.primary,
+              resize: 'vertical'
+            }}
           />
         </div>
         <div>
-          <label className="block text-xs text-zinc-500 mb-1">
+          <label
+            style={{
+              display: 'block',
+              fontSize: 11,
+              color: SPINLY_BRAND.text.secondary,
+              marginBottom: 4
+            }}
+          >
             Hashtags (séparés par espaces)
           </label>
           <textarea
             name="hashtags"
             defaultValue={hashtagsString}
             rows={3}
-            className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-zinc-100 font-mono focus:outline-none focus:border-zinc-600"
+            style={{
+              width: '100%',
+              background: '#0F0F0F',
+              border: `1px solid ${SPINLY_BRAND.border.default}`,
+              borderRadius: 8,
+              padding: '8px 10px',
+              fontSize: 12,
+              fontFamily: 'monospace',
+              color: SPINLY_BRAND.text.primary,
+              resize: 'vertical'
+            }}
           />
         </div>
         <button
           type="submit"
-          className="px-4 py-2 bg-zinc-100 text-zinc-950 rounded-lg text-sm font-medium hover:bg-white transition"
+          style={{
+            background: SPINLY_BRAND.text.primary,
+            color: '#0A0A0A',
+            border: 'none',
+            padding: '10px 14px',
+            borderRadius: 8,
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: 'pointer',
+            alignSelf: 'flex-start'
+          }}
         >
           Sauver les changements
         </button>

@@ -18,10 +18,12 @@
     "@sparticuz/chromium": "^148.0.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.3",
+    "date-fns": "^4.1.0",
     "jszip": "^3.10.1",
     "next": "14.2.35",
     "puppeteer-core": "^24.43.0",
     "react": "^18",
+    "react-day-picker": "^9.14.0",
     "react-dom": "^18"
   },
   "devDependencies": {

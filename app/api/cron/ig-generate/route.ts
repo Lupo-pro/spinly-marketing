@@ -27,7 +27,9 @@ export async function GET(req: Request) {
         `${TG_EMOJIS.warn} IG generator: ${draftCount} drafts en attente, génération du jour skippée. ` +
           `Valide d'abord sur ${appUrl}/admin/instagram`
       )
-    } catch {}
+    } catch (err) {
+      console.error('[ig-generate] Telegram skip notif failed:', err)
+    }
     return NextResponse.json({ skipped: true, reason: 'too_many_drafts', count: draftCount })
   }
 
@@ -36,7 +38,9 @@ export async function GET(req: Request) {
   if (angles.length === 0) {
     try {
       await sendTelegramMessage(`${TG_EMOJIS.warn} IG generator: no angles available`)
-    } catch {}
+    } catch (err) {
+      console.error('[ig-generate] Telegram no-angles notif failed:', err)
+    }
     return NextResponse.json({ generated: 0, reason: 'no_angles' })
   }
 
@@ -160,7 +164,9 @@ export async function GET(req: Request) {
       `${TG_EMOJIS.spin} IG generator: ${successCount}/${angles.length} carrousels + ${totalSinglePosts} posts simples + ${totalStories} stories générés.\n` +
         `Valide sur ${appUrl}/admin/instagram`
     )
-  } catch {}
+  } catch (err) {
+    console.error('[ig-generate] Telegram success notif failed:', err)
+  }
 
   return NextResponse.json({
     generated: successCount,
