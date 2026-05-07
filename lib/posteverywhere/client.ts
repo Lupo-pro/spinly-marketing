@@ -89,9 +89,11 @@ interface InitiateUploadResponse {
 }
 
 /**
- * Two-step upload:
- *   1) POST /media/upload with file metadata → get media_id + presigned upload_url
- *   2) Upload bytes to upload_url using multipart with the spec'd field name
+ * Three-step upload (verified against developers.posteverywhere.ai):
+ *   1) POST /media/upload       — register the upload, get media_id + presigned upload_url
+ *   2) POST upload_url multipart — upload the bytes (field name from upload_method)
+ *   3) POST /media/{id}/complete — finalise. Without this, createPost rejects
+ *      with media_not_ready (status: uploading).
  *
  * Returns the media_id ready to be referenced from create-post.
  */
@@ -112,7 +114,7 @@ export async function uploadMedia(
 
   const { media_id, upload_url, upload_method } = initiate.data
 
-  // Step 2: upload the bytes to the presigned URL
+  // Step 2: upload the bytes to the presigned URL.
   // The upload_url is on a different domain (e.g. upload.posteverywhere.ai)
   // and does not need the API Bearer auth — it's pre-authenticated.
   const fieldName = upload_method?.field_name || 'file'
@@ -133,6 +135,17 @@ export async function uploadMedia(
       `Pre-signed upload failed (${uploadRes.status}): ${text}`
     )
   }
+
+  // Step 3: finalise. Doc doesn't spec a body — sending {} works.
+  // Status field name in the response isn't documented; we don't read it,
+  // we just rely on the 201 to signal success.
+  await pe<{ data: { media_id: string; media_ids?: string[] } }>(
+    `/media/${media_id}/complete`,
+    {
+      method: 'POST',
+      body: JSON.stringify({})
+    }
+  )
 
   return { media_id }
 }

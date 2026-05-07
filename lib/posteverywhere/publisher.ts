@@ -56,10 +56,11 @@ function defaultPlatforms(contentType: string): Platform[] {
   return (['instagram', 'facebook', 'threads'] as Platform[]).filter((p) => ACCOUNT_IDS[p])
 }
 
+// Phase 12 fix: parallel uploads. 10 sequential ones at ~600ms each came
+// dangerously close to the 30s fetch timeout for carousels. Promise.all keeps
+// the slide order via map's index → returned media_ids preserved in array order.
 async function uploadSlides(slideImageUrls: string[]): Promise<string[]> {
-  const mediaIds: string[] = []
-  for (let i = 0; i < slideImageUrls.length; i++) {
-    const url = slideImageUrls[i]
+  const tasks = slideImageUrls.map(async (url, i) => {
     const res = await fetch(url)
     if (!res.ok) {
       throw new Error(`Failed to fetch slide ${i + 1} from storage (HTTP ${res.status})`)
@@ -67,9 +68,9 @@ async function uploadSlides(slideImageUrls: string[]): Promise<string[]> {
     const buffer = Buffer.from(await res.arrayBuffer())
     const filename = `slide-${String(i + 1).padStart(2, '0')}.png`
     const result = await uploadMedia(buffer, filename, 'image/png')
-    mediaIds.push(result.media_id)
-  }
-  return mediaIds
+    return result.media_id
+  })
+  return Promise.all(tasks)
 }
 
 // PE has no firstComment field, so hashtags go inline at the end of the
