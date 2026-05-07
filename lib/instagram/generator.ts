@@ -206,14 +206,78 @@ RÈGLES :
 - bgWord (visual_bg) : 1 seul mot court, MAJUSCULES
 - Reste 100% espagnol naturel LatAm. Pas d'anglicismes techniques
 
-VARIÉTÉ DES HOOKS (évite la formule unique "X razones por las que Y") :
-- Stat-driven : "150 cafés después. Esto es lo que tienen en común."
-- Provocation : "Tu mesero no es vago. Es que nadie le explica los miedos."
-- Counter-intuitif : "El problema nunca fue tu café. Es Google Maps."
-- Question (utiliser type "question" plutôt que "hook" alors)
-- Promesse : "3 cosas que tu negocio puede automatizar hoy mismo."
-- Révélation : "Lo que pasa cuando un cliente no deja reseña."
-Varie les nombres (3, 5, 7, 12, 30, 68%, x6, 150). Pas toujours 5.
+═══════════════════════════════════════════════════════════════════
+PATRONES DE HOOKS — UTILISA UNA VARIEDAD MÁXIMA
+
+Cada draft DEBE usar un patrón DIFERENTE del último draft del mismo angle.
+Aquí están les 20 patrones disponibles. Rota entre ellos para evitar la
+repetición.
+
+CATÉGORIE A — STAT-DRIVEN (numéros qui choquent)
+1. "[X]% de [cible] [verbe d'inaction]"
+   → "78% de los cafés latam pierden reseñas cada mes"
+2. "[Chiffre brut] [unité] después: [révélation]"
+   → "150 cafés después. Esto es lo que tienen en común."
+3. "[X] vs [Y]: la diferencia que [conséquence]"
+   → "12 vs 87 reseñas: por qué tu competidor te gana"
+4. "Tu [chose] vale [montant]. ¿Lo sabías?"
+   → "Tu ficha Google vale $1,200/mes en clientes perdidos"
+
+CATÉGORIE B — PROVOCATION (qui dérange)
+5. "Tu [acteur interne] no es [accusation]. Es que [vraie raison]"
+   → "Tu mesero no es vago. Es que nadie le explica los 5 miedos."
+6. "El [mensonge classique] es mentira. Aquí está [vérité]"
+   → "El '4.8 estrellas basta' es mentira. Aquí está lo que realmente importa."
+7. "Si [situation actuelle], estás [conséquence négative]"
+   → "Si pides reseñas verbalmente, estás regalando dinero a Google."
+8. "[Catégorie de gens] no entienden [insight]"
+   → "Los dueños de cafés no entienden cómo Google los penaliza"
+
+CATÉGORIE C — COUNTER-INTUITIF (renverse la croyance)
+9. "El problema nunca fue [X]. Es [Y]"
+   → "El problema nunca fue tu café. Son las reseñas."
+10. "Lo que pensabas: [X]. La realidad: [Y]"
+    → "Pensabas que más reseñas = más estrellas. No. La recencia importa más."
+11. "Más [chose] no es la solución. La solución es [autre chose]"
+    → "Más publicidad no es la solución. Lo es más reseñas recientes."
+
+CATÉGORIE D — QUESTION (interpelle directement)
+12. "¿Cuántas [chose] [verbe] sin [action] este mes?"
+    → "¿Cuántas reseñas perdiste sin pedirlas este mes?"
+13. "¿Por qué [conséquence] aunque [contexte positif]?"
+    → "¿Por qué bajas en Google aunque tienes 5 estrellas?"
+14. "¿Cuándo fue la última vez que [action critique]?"
+    → "¿Cuándo fue la última vez que un cliente te dejó reseña sin pedir?"
+15. "¿Sabes [fait étonnant]?"
+    → "¿Sabes que Google penaliza las reseñas viejas más que las negativas?"
+
+CATÉGORIE E — RÉVÉLATION (insider knowledge)
+16. "Lo que pasa cuando [scénario] (y tú no lo ves)"
+    → "Lo que pasa cuando un cliente NO deja reseña (y tú no lo sabes)"
+17. "El secreto [adjectif] de [cible qui réussit]"
+    → "El secreto incómodo de los cafés que dominan Google Maps"
+18. "[Tendance/changement] que casi nadie notó"
+    → "El cambio de Google Maps de febrero que casi nadie notó"
+
+CATÉGORIE F — PROMESSE (résultat concret)
+19. "[X] cosas que [cible] puede [résultat] hoy mismo"
+    → "3 cosas que tu negocio puede automatizar con IA hoy mismo"
+20. "Cómo pasar de [état initial] a [état désiré] en [délai]"
+    → "Cómo pasar de 23 a 90 reseñas en 60 días sin pedir nada"
+
+REGLA CRUCIAL :
+- Si el campo \`recent_hooks\` está presente en el contexto, mira los patrones
+  que cada uno utilizaba.
+- Para tu nuevo hook, elige un patrón DIFERENTE de los recent_hooks.
+- Si por algún motivo necesitas reusar un patrón (4+ posts du même axe),
+  reutilízalo en último recurso.
+
+VARIA AUSSI :
+- Los números : 3, 5, 7, 12, 30, 68%, 78%, x6, 150, 12,847. Pas toujours 5.
+- Las cifras hipotéticas vs cifras Spinly réels
+- Las longueurs : courte (5 mots) vs longue (12+ mots)
+- L'emoji : 0 ou 1 max, jamais en début
+═══════════════════════════════════════════════════════════════════
 
 CAPTION (200-400 mots) :
 - Hook engageant en première ligne
@@ -235,11 +299,53 @@ export async function generateDraft(angle: {
   hook: string
   thesis: string
 }): Promise<GeneratedDraft> {
+  // Phase 17 — fetch the last 3 hooks of the same axis so Haiku knows which
+  // patterns to avoid. Best-effort: any DB error or missing column degrades
+  // silently to "no recent_hooks context" and we generate normally.
+  let recentHooksBlock = ''
+  try {
+    const supabase = getServerSupabase()
+    const { data: recentDrafts } = await supabase
+      .from('ig_posts')
+      .select('caption, slides_json, ig_angles!inner(axis)')
+      .eq('ig_angles.axis', angle.axis)
+      .order('generated_at', { ascending: false })
+      .limit(3)
+
+    const recentHooks = (recentDrafts ?? [])
+      .map((d) => {
+        // Prefer the actual hook slide title; fall back to first caption line.
+        const slides = Array.isArray(d.slides_json) ? d.slides_json : []
+        const hookSlide = slides.find(
+          (s: unknown) =>
+            typeof s === 'object' &&
+            s !== null &&
+            (s as { type?: string }).type === 'hook'
+        ) as { title?: string } | undefined
+        const fromSlide = hookSlide?.title?.trim()
+        const fromCaption = d.caption?.split('\n')[0]?.trim()
+        return (fromSlide || fromCaption || '').slice(0, 160)
+      })
+      .filter((h) => h.length > 0)
+
+    if (recentHooks.length > 0) {
+      recentHooksBlock =
+        `\n\n## HOOKS RÉCENTS DE CET ANGLE (${angle.axis}) — NE REPRENDS PAS LE MÊME PATTERN\n` +
+        recentHooks.map((h, i) => `${i + 1}. "${h}"`).join('\n') +
+        `\n\nIdentifica el patrón (de los 20 patrones del system prompt) que cada uno usaba, y elige otro patrón para tu nuevo hook.\n`
+    }
+  } catch (err) {
+    console.warn(
+      '[generator] recent_hooks fetch failed, generating without context:',
+      err instanceof Error ? err.message : err
+    )
+  }
+
   const userPrompt = `Génère un carrousel Instagram pour Spinly basé sur cet angle :
 
 AXE : ${angle.axis}
 HOOK IMPOSÉ (peux le reformuler légèrement mais garder l'angle) : ${angle.hook}
-THÈSE : ${angle.thesis}
+THÈSE : ${angle.thesis}${recentHooksBlock}
 
 ${STRUCTURE_RULES}
 
