@@ -194,55 +194,11 @@ const ANGLES: Angle[] = [
       'La asimetría emocional: el enojo motiva más que la satisfacción. Sin un sistema activo de captación de reseñas positivas, tu Google se llena solo de quejas.'
   },
 
-  // ─── vendedor (8) ──────────────────────────────────────────────────────
-  {
-    axis: 'vendedor',
-    hook: 'Cómo gané 1.200 USD el mes pasado vendiendo Spinly en Bogotá',
-    thesis:
-      'Comisión recurrente del 30% sobre cada cliente activo. 40 cafés a 14 USD/mes = 168 USD/mes solo de un mes de ventas. Y la base crece cada mes.'
-  },
-  {
-    axis: 'vendedor',
-    hook: 'Por qué Spinly NO es un MLM',
-    thesis:
-      'No vendes productos físicos, no reclutas otros vendedores, no hay paquetes de inversión, no hay rangos por reclutamiento. Comisión directa por cada cliente que firma. Punto.'
-  },
-  {
-    axis: 'vendedor',
-    hook: 'El error que cometen 9 de cada 10 nuevos vendedores Spinly',
-    thesis:
-      'Vender la herramienta. Hay que vender el resultado: más reseñas Google = mejor ranking = más clientes. La herramienta es el medio, no el mensaje.'
-  },
-  {
-    axis: 'vendedor',
-    hook: '5 objeciones reales que escucharás vendiendo Spinly y cómo responderlas',
-    thesis:
-      'Ya tengo agencia (compáralas), no tengo presupuesto (30 días gratis), no creo en eso (caso de éxito), me da pena pedir reseñas (no las pides tú), después (cuándo).'
-  },
-  {
-    axis: 'vendedor',
-    hook: 'Cuántos cafés tienes que ver para firmar uno con Spinly',
-    thesis:
-      'Promedio: 12 visitas para firmar 1. Con buen pitch: 8 visitas. Con demo en vivo de la ruleta: 5 visitas. Los números te dicen dónde fallas.'
-  },
-  {
-    axis: 'vendedor',
-    hook: 'El día que un café me dijo que no, y volvió 3 semanas después rogando',
-    thesis:
-      'Caso real: cafetería en Medellín dijo no, vio a su competencia firmar y multiplicar reseñas, regresó pidiendo el plan Growth directamente. La urgencia se construye, no se grita.'
-  },
-  {
-    axis: 'vendedor',
-    hook: 'Por qué los cafés son el segmento más fácil para empezar como vendedor Spinly',
-    thesis:
-      'Volumen alto de clientes, ticket medio bajo (decisión rápida), dueño presente la mayoría del tiempo, dolor claro (clientes leen reseñas antes de elegir café).'
-  },
-  {
-    axis: 'vendedor',
-    hook: 'El script de 90 segundos que usé para firmar mis primeros 5 clientes',
-    thesis:
-      '1) Saludar y elogiar el local. 2) Pregunta clave: ¿cuántas reseñas Google sumas este mes? 3) Mostrar la ruleta en vivo. 4) Cerrar con 30 días gratis.'
-  },
+  // ─── vendedor — RETIRÉ (Phase 17.1) ────────────────────────────────────
+  // Cet axe parlait aux vendedores Spinly. @spinly.lat est un compte public
+  // qui s'adresse aux dueños de negocios — la prospection vendedor passe par
+  // le webinaire/page séparée, pas Instagram. Les angles ne sont plus seedés.
+  // Les drafts existants sont nettoyés via le SQL de Phase 17.1.
 
   // ─── social_proof (5) ──────────────────────────────────────────────────
   {
@@ -363,7 +319,6 @@ async function main() {
     anti_agencias: 12,
     google_algo: 8,
     pme_pain: 10,
-    vendedor: 8,
     social_proof: 5,
     gamification: 4,
     reseñas_strategy: 3

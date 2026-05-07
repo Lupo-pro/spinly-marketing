@@ -124,20 +124,14 @@ export async function findNextSlot(
   const minLead = addMinutes(fromDate, MIN_LEAD_MINUTES)
   const tolMs = SLOT_OCCUPATION_TOLERANCE_MIN * 60 * 1000
 
-  for (let dayOffset = 0; dayOffset <= settings.scheduling_horizon_days; dayOffset++) {
-    const day = addDays(fromDate, dayOffset)
-    const dayKey = bogotaDayKey(day)
-
+  function trySlotInDay(day: Date, dayKey: string): Date | null {
     const sameTypeOnDay = occupiedSlots.filter(
       (s) => s.content_type === contentType && bogotaDayKey(s.scheduled_utc) === dayKey
     )
-    if (sameTypeOnDay.length >= maxPerDay) continue
+    if (sameTypeOnDay.length >= maxPerDay) return null
 
     for (const slotStr of slotStrings) {
       const slotUtc = utcForSlot(day, slotStr)
-
-      // Enforce earliest/latest cap defensively (should already be encoded
-      // in the slot strings, but bad migration data could leak through).
       const slotZoned = toZonedTime(slotUtc, TZ)
       if (
         slotZoned.getHours() < settings.earliest_hour ||
@@ -145,7 +139,6 @@ export async function findNextSlot(
       ) {
         continue
       }
-
       if (isBefore(slotUtc, minLead)) continue
 
       const isOccupied = occupiedSlots.some(
@@ -160,6 +153,31 @@ export async function findNextSlot(
 
       return slotUtc
     }
+    return null
+  }
+
+  // PASS 1 — favor a true daily mix. Skip days that already have ≥1 of this
+  // content type, even if they're under the daily quota. Result: a
+  // carousel/post/story batch ends up spread across distinct days first.
+  for (let dayOffset = 0; dayOffset <= settings.scheduling_horizon_days; dayOffset++) {
+    const day = addDays(fromDate, dayOffset)
+    const dayKey = bogotaDayKey(day)
+    const sameTypeCount = occupiedSlots.filter(
+      (s) => s.content_type === contentType && bogotaDayKey(s.scheduled_utc) === dayKey
+    ).length
+    if (sameTypeCount > 0) continue
+
+    const slot = trySlotInDay(day, dayKey)
+    if (slot) return slot
+  }
+
+  // PASS 2 — fallback. Allow stacking on a day that already has the same
+  // type as long as we're under the daily quota and spacing rules.
+  for (let dayOffset = 0; dayOffset <= settings.scheduling_horizon_days; dayOffset++) {
+    const day = addDays(fromDate, dayOffset)
+    const dayKey = bogotaDayKey(day)
+    const slot = trySlotInDay(day, dayKey)
+    if (slot) return slot
   }
 
   return null
