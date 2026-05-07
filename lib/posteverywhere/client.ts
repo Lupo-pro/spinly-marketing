@@ -23,7 +23,7 @@ export class PostEverywhereError extends Error {
   }
 }
 
-async function pe<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function pe<T>(path: string, init: RequestInit = {}, timeoutMs = 30000): Promise<T> {
   if (!PE_KEY) {
     throw new PostEverywhereError(0, null, 'POSTEVERYWHERE_API_KEY is missing')
   }
@@ -36,7 +36,7 @@ async function pe<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 30000)
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
     const res = await fetch(url, { ...init, headers, signal: controller.signal })
@@ -213,10 +213,17 @@ export interface PeCreatedPost {
 }
 
 export async function createPost(params: CreatePostParams): Promise<PeCreatedPost> {
-  const res = await pe<{ data: PeCreatedPost }>('/posts', {
-    method: 'POST',
-    body: JSON.stringify(params)
-  })
+  // PE validates the 10 carousel media + dispatches to the destination queues
+  // server-side; observed >30s on first request. Leave 50s here so we stay
+  // under the 60s Hobby function budget while uploads (~5s) + this stay safe.
+  const res = await pe<{ data: PeCreatedPost }>(
+    '/posts',
+    {
+      method: 'POST',
+      body: JSON.stringify(params)
+    },
+    50000
+  )
   return res.data
 }
 
