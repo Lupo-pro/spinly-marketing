@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/supabase/server'
 import { getPost } from '@/lib/posteverywhere/client'
 import { alertPendingDrafts } from '@/lib/pilot/alerts'
+import { runProcessingWatchdog } from '@/lib/pilot/watchdog'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -27,6 +28,19 @@ export async function GET(req: Request) {
   }
 
   const supabase = getServerSupabase()
+
+  // Watchdog first — re-fires posts stuck in pilot_processing for >5 min.
+  // Fire-and-forget; result is included in the cron response for visibility.
+  let watchdogResult: { retriggered: string[]; errors: string[] } = {
+    retriggered: [],
+    errors: []
+  }
+  try {
+    watchdogResult = await runProcessingWatchdog()
+  } catch (err) {
+    console.error('[pe-status-poll] watchdog failed:', err)
+  }
+
   const { data: pending } = await supabase
     .from('ig_posts')
     .select('id, pe_post_id, pe_status, pe_published_at')
@@ -44,7 +58,8 @@ export async function GET(req: Request) {
       ok: true,
       checked: 0,
       updated: 0,
-      alertedDrafts: alertResult.alerted
+      alertedDrafts: alertResult.alerted,
+      watchdogRetriggered: watchdogResult.retriggered.length
     })
   }
 
@@ -96,6 +111,7 @@ export async function GET(req: Request) {
     checked: pending.length,
     updated,
     errors,
-    alertedDrafts: alertResult.alerted
+    alertedDrafts: alertResult.alerted,
+    watchdogRetriggered: watchdogResult.retriggered.length
   })
 }
