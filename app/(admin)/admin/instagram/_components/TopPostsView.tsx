@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { SPINLY_BRAND } from '../_styles/brand'
+import { formatNumber, formatPercent } from '@/lib/format'
 
 export interface TopPostStat {
   post_id: string
@@ -30,8 +31,8 @@ const METRIC_LABELS = {
 export type TopPostsMetric = keyof typeof METRIC_LABELS
 
 function formatMetric(value: number, metric: TopPostsMetric): string {
-  if (metric === 'engagement_rate') return `${value}%`
-  return value.toLocaleString('fr-FR')
+  if (metric === 'engagement_rate') return formatPercent(value)
+  return formatNumber(value)
 }
 
 export default function TopPostsView({
@@ -192,10 +193,10 @@ export default function TopPostsView({
                       flexWrap: 'wrap'
                     }}
                   >
-                    <span>👁 {stat.reach.toLocaleString('fr-FR')}</span>
-                    <span>❤️ {stat.likes}</span>
-                    <span>💬 {stat.comments}</span>
-                    <span>🔖 {stat.saves}</span>
+                    <span>👁 {formatNumber(stat.reach)}</span>
+                    <span>❤️ {formatNumber(stat.likes)}</span>
+                    <span>💬 {formatNumber(stat.comments)}</span>
+                    <span>🔖 {formatNumber(stat.saves)}</span>
                   </div>
                   <div
                     style={{

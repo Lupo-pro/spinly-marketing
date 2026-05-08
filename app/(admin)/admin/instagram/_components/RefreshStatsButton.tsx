@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { RefreshCw } from 'lucide-react'
 import { SPINLY_BRAND } from '../_styles/brand'
 
 interface RefreshResult {
@@ -71,7 +72,13 @@ export default function RefreshStatsButton() {
           minHeight: 44
         }}
       >
-        {loading ? '⏳ Refresh en cours…' : '🔄 Refresh stats maintenant'}
+        {loading ? (
+          '⏳ Refresh en cours…'
+        ) : (
+          <>
+            <RefreshCw size={14} aria-hidden /> Refresh stats maintenant
+          </>
+        )}
       </button>
       {result && (
         <span style={{ fontSize: 12, color: SPINLY_BRAND.text.secondary }}>

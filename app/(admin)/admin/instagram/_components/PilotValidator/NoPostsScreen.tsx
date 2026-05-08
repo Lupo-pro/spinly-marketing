@@ -1,8 +1,27 @@
 import Link from 'next/link'
+import { RefreshCw, Calendar, Sparkles } from 'lucide-react'
 import { SPINLY_BRAND } from '../../_styles/brand'
+import { EmptyState } from '../ui/EmptyState'
 import type { Stats } from './types'
 
 export function NoPostsScreen({ stats, onRefresh }: { stats: Stats; onRefresh: () => void }) {
+  const sessionTotal = stats.approved + stats.rejected + stats.skipped
+  const validatedSomething = sessionTotal > 0
+
+  // Two distinct empty states:
+  //  1. Started a session and finished it ("Tout est validé !" celebration)
+  //  2. Page loaded with 0 drafts ("Pas encore de drafts" — generate CTA)
+  if (!validatedSomething) {
+    return (
+      <EmptyState
+        icon={<Sparkles size={40} aria-hidden style={{ color: '#F59E2C' }} />}
+        title="Pas encore de drafts à valider"
+        description="Le cron tourne tous les jours à 11h Bogotá pour générer une nouvelle inbox. Tu peux aussi générer manuellement depuis le Content Studio."
+        cta={{ label: 'Aller au Content Studio', href: '/admin/instagram' }}
+      />
+    )
+  }
+
   return (
     <div
       style={{
@@ -16,7 +35,9 @@ export function NoPostsScreen({ stats, onRefresh }: { stats: Stats; onRefresh: (
         borderRadius: 14
       }}
     >
-      <div style={{ fontSize: 48 }}>🎉</div>
+      <div style={{ fontSize: 48 }} aria-hidden>
+        🎉
+      </div>
       <h2
         style={{
           fontFamily: 'var(--font-display)',
@@ -66,10 +87,13 @@ export function NoPostsScreen({ stats, onRefresh }: { stats: Stats; onRefresh: (
             fontWeight: 700,
             border: 'none',
             cursor: 'pointer',
-            minHeight: 44
+            minHeight: 44,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6
           }}
         >
-          🔄 Recharger la liste
+          <RefreshCw size={14} aria-hidden /> Recharger la liste
         </button>
         <Link
           href="/admin/instagram/calendar"
@@ -84,10 +108,11 @@ export function NoPostsScreen({ stats, onRefresh }: { stats: Stats; onRefresh: (
             textDecoration: 'none',
             minHeight: 44,
             display: 'inline-flex',
-            alignItems: 'center'
+            alignItems: 'center',
+            gap: 6
           }}
         >
-          📅 Voir le calendrier
+          <Calendar size={14} aria-hidden /> Voir le calendrier
         </Link>
       </div>
     </div>

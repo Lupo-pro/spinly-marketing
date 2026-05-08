@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { RefreshCw, Sparkles } from 'lucide-react'
 import { SPINLY_BRAND } from '../_styles/brand'
 import { ConfirmModal } from './ui/ConfirmModal'
 
@@ -97,7 +98,7 @@ export default function ContentStudioHeader() {
               cursor: 'pointer'
             }}
           >
-            🔄 Refresh
+            <RefreshCw size={14} aria-hidden /> Refresh
           </button>
           <button
             type="button"
@@ -118,7 +119,13 @@ export default function ContentStudioHeader() {
               opacity: generating ? 0.6 : 1
             }}
           >
-            {generating ? '⏳ Génération…' : '✨ Générer maintenant'}
+            {generating ? (
+              '⏳ Génération…'
+            ) : (
+              <>
+                <Sparkles size={14} aria-hidden /> Générer maintenant
+              </>
+            )}
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ArrowLeft, Calendar } from 'lucide-react'
 import { getServerSupabase } from '@/lib/supabase/server'
 import PilotValidator, { type PilotPost } from '../_components/PilotValidator'
 import { SPINLY_BRAND } from '../_styles/brand'
@@ -41,9 +42,16 @@ export default async function PilotPage() {
         <div style={{ marginBottom: 12 }}>
           <Link
             href="/admin/instagram"
-            style={{ fontSize: 12, color: SPINLY_BRAND.text.secondary, textDecoration: 'none' }}
+            style={{
+              fontSize: 12,
+              color: SPINLY_BRAND.text.secondary,
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4
+            }}
           >
-            ← Content Studio
+            <ArrowLeft size={14} aria-hidden /> Content Studio
           </Link>
         </div>
 
@@ -95,10 +103,14 @@ export default async function PilotPage() {
               textDecoration: 'none',
               padding: '8px 14px',
               border: `1px solid ${SPINLY_BRAND.border.default}`,
-              borderRadius: 10
+              borderRadius: 10,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              minHeight: 36
             }}
           >
-            📅 Calendrier
+            <Calendar size={14} aria-hidden /> Calendrier
           </Link>
         </header>
 

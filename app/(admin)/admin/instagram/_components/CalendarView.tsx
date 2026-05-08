@@ -102,10 +102,14 @@ function buildBuckets(posts: CalendarPost[], horizonDays: number): DayBucket[] {
 function PostCardMini({ post }: { post: CalendarPost }) {
   const ctype = (post.content_type ?? 'carousel') as keyof typeof SPINLY_BRAND.contentType
   const meta = SPINLY_BRAND.contentType[ctype]
-  const time = bogotaTimeLabel(new Date(post.pilot_scheduled_at))
+  const scheduledDate = new Date(post.pilot_scheduled_at)
+  const time = bogotaTimeLabel(scheduledDate)
   const firstUrl = Array.isArray(post.slide_image_urls) ? post.slide_image_urls[0] : null
   const peStatus = post.pe_status as keyof typeof SPINLY_BRAND.status | null
   const peBadge = peStatus && SPINLY_BRAND.status[peStatus] ? SPINLY_BRAND.status[peStatus] : null
+
+  // Past + already published → dim the card so the eye focuses on what's next.
+  const isPastPublished = post.pe_status === 'published' && scheduledDate.getTime() < Date.now()
 
   let borderColor: string = SPINLY_BRAND.border.default
   if (post.pe_status === 'published') borderColor = 'rgba(74, 222, 128, 0.3)'
@@ -116,7 +120,13 @@ function PostCardMini({ post }: { post: CalendarPost }) {
   return (
     <Link
       href={`/admin/instagram/${post.id}`}
-      style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+      style={{
+        textDecoration: 'none',
+        color: 'inherit',
+        display: 'block',
+        opacity: isPastPublished ? 0.5 : 1,
+        transition: 'opacity 0.2s ease'
+      }}
     >
       <div
         style={{

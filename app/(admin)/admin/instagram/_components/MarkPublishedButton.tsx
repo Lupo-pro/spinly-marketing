@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { markAsPublishedAction, unmarkAsPublishedAction } from '../actions'
 import { SPINLY_BRAND } from '../_styles/brand'
@@ -27,13 +27,91 @@ export default function MarkPublishedButton({
   const [hoverPrimary, setHoverPrimary] = useState(false)
   const [hoverSecondary, setHoverSecondary] = useState(false)
   const [unmarkOpen, setUnmarkOpen] = useState(false)
+  const [undoToast, setUndoToast] = useState<{ savedPermalink: string | null } | null>(null)
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    }
+  }, [])
+
+  function clearUndoTimer() {
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current)
+      undoTimerRef.current = null
+    }
+  }
+
+  function showUndoToast(savedPermalink: string | null) {
+    clearUndoTimer()
+    setUndoToast({ savedPermalink })
+    undoTimerRef.current = setTimeout(() => setUndoToast(null), 5000)
+  }
+
+  function runUndo() {
+    if (!undoToast) return
+    const saved = undoToast.savedPermalink ?? undefined
+    clearUndoTimer()
+    setUndoToast(null)
+    startTransition(async () => {
+      const r = await markAsPublishedAction(postId, saved)
+      if (!r.ok) setError(r.error)
+      router.refresh()
+    })
+  }
 
   const errorColor = SPINLY_BRAND.status.failed.fg
   const successColor = SPINLY_BRAND.status.published.fg
   const successBg = SPINLY_BRAND.status.published.bg
 
+  // ─── Undo toast (5s) — shown right after unmark. Position:fixed so it floats above. ───
+  const undoToastNode = undoToast ? (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        position: 'fixed',
+        bottom: 24,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 1100,
+        background: 'var(--spinly-bg-base)',
+        border: '1px solid var(--spinly-border-default)',
+        borderRadius: 12,
+        padding: '12px 16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.6)',
+        fontSize: 13,
+        color: 'var(--spinly-fg-primary)'
+      }}
+    >
+      <span>Marquage annulé.</span>
+      <button
+        type="button"
+        onClick={runUndo}
+        style={{
+          padding: '6px 12px',
+          background: 'var(--spinly-gradient-cta)',
+          color: '#FFFFFF',
+          border: 'none',
+          borderRadius: 8,
+          fontWeight: 600,
+          fontSize: 12,
+          cursor: 'pointer',
+          minHeight: 32
+        }}
+      >
+        ↶ Restaurer
+      </button>
+    </div>
+  ) : null
+
   if (status === 'published') {
     return (
+      <>
       <div style={{ display: 'grid', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span
@@ -89,9 +167,14 @@ export default function MarkPublishedButton({
           open={unmarkOpen}
           onClose={() => setUnmarkOpen(false)}
           onConfirm={() => {
+            const savedPermalink = igPermalink ?? null
             startTransition(async () => {
               const r = await unmarkAsPublishedAction(postId)
-              if (!r.ok) setError(r.error)
+              if (!r.ok) {
+                setError(r.error)
+                return
+              }
+              showUndoToast(savedPermalink)
               router.refresh()
             })
           }}
@@ -101,14 +184,19 @@ export default function MarkPublishedButton({
           variant="destructive"
         />
       </div>
+      {undoToastNode}
+      </>
     )
   }
 
   if (status !== 'approved' || !hasRendered) {
     return (
-      <p style={{ fontSize: 13, color: SPINLY_BRAND.text.tertiary, margin: 0 }}>
-        Le post doit être approuvé et avoir ses 10 slides rendues pour pouvoir être marqué publié.
-      </p>
+      <>
+        <p style={{ fontSize: 13, color: SPINLY_BRAND.text.tertiary, margin: 0 }}>
+          Le post doit être approuvé et avoir ses 10 slides rendues pour pouvoir être marqué publié.
+        </p>
+        {undoToastNode}
+      </>
     )
   }
 
@@ -127,6 +215,7 @@ export default function MarkPublishedButton({
 
   if (showInput) {
     return (
+      <>
       <div style={{ display: 'grid', gap: 8 }}>
         <input
           type="url"
@@ -198,10 +287,13 @@ export default function MarkPublishedButton({
           Tu peux laisser le lien vide si tu n&apos;as pas encore l&apos;URL Instagram du post.
         </p>
       </div>
+      {undoToastNode}
+      </>
     )
   }
 
   return (
+    <>
     <button
       type="button"
       onClick={() => setShowInput(true)}
@@ -223,5 +315,7 @@ export default function MarkPublishedButton({
     >
       Marquer comme publié manuellement
     </button>
+    {undoToastNode}
+    </>
   )
 }
