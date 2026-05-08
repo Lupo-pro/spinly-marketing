@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { renderPostAction } from '../actions'
+import { SPINLY_BRAND } from '../_styles/brand'
 
 export default function RenderButton({
   postId,
@@ -14,6 +15,7 @@ export default function RenderButton({
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
+  const [hover, setHover] = useState(false)
 
   function handleClick() {
     setError('')
@@ -37,11 +39,35 @@ export default function RenderButton({
         type="button"
         onClick={handleClick}
         disabled={isPending}
-        className="px-4 py-2 bg-amber-500 text-zinc-950 rounded-lg text-sm font-medium hover:bg-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition"
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        style={{
+          padding: '10px 16px',
+          background: SPINLY_BRAND.gradientWarm,
+          color: '#FFFFFF',
+          borderRadius: 10,
+          fontSize: 13,
+          fontWeight: 600,
+          border: 'none',
+          cursor: isPending ? 'not-allowed' : 'pointer',
+          opacity: isPending ? 0.4 : hover ? 0.9 : 1,
+          minHeight: 44,
+          transition: 'opacity 0.15s ease'
+        }}
       >
         {isPending ? 'Rendu en cours…' : hasUrls ? 'Re-render slides' : 'Render slides'}
       </button>
-      {error && <p className="text-rose-400 text-sm mt-2">{error}</p>}
+      {error && (
+        <p
+          style={{
+            color: SPINLY_BRAND.status.failed.fg,
+            fontSize: 13,
+            marginTop: 8
+          }}
+        >
+          {error}
+        </p>
+      )}
     </div>
   )
 }

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { markAsPublishedAction, unmarkAsPublishedAction } from '../actions'
+import { SPINLY_BRAND } from '../_styles/brand'
 
 interface Props {
   postId: string
@@ -22,12 +23,28 @@ export default function MarkPublishedButton({
   const [permalink, setPermalink] = useState(igPermalink || '')
   const [showInput, setShowInput] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [hoverPrimary, setHoverPrimary] = useState(false)
+  const [hoverSecondary, setHoverSecondary] = useState(false)
+
+  const errorColor = SPINLY_BRAND.status.failed.fg
+  const successColor = SPINLY_BRAND.status.published.fg
+  const successBg = SPINLY_BRAND.status.published.bg
 
   if (status === 'published') {
     return (
-      <div className="space-y-2">
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 rounded-full text-sm font-medium">
+      <div style={{ display: 'grid', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span
+            style={{
+              padding: '4px 12px',
+              background: successBg,
+              color: successColor,
+              borderRadius: 9999,
+              fontSize: 13,
+              fontWeight: 500,
+              border: `1px solid ${successColor}40`
+            }}
+          >
             ✓ Publié
           </span>
           {igPermalink && (
@@ -35,7 +52,12 @@ export default function MarkPublishedButton({
               href={igPermalink}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-zinc-400 hover:text-zinc-200 underline"
+              style={{
+                fontSize: 13,
+                color: SPINLY_BRAND.text.secondary,
+                textDecoration: 'underline',
+                padding: '6px 0'
+              }}
             >
               Voir sur Instagram →
             </a>
@@ -52,18 +74,29 @@ export default function MarkPublishedButton({
             })
           }}
           disabled={isPending}
-          className="text-xs text-zinc-500 hover:text-zinc-300 underline"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            fontSize: 12,
+            color: SPINLY_BRAND.text.tertiary,
+            textDecoration: 'underline',
+            cursor: isPending ? 'not-allowed' : 'pointer',
+            opacity: isPending ? 0.5 : 1,
+            padding: '6px 0',
+            textAlign: 'left',
+            alignSelf: 'flex-start'
+          }}
         >
           Annuler le marquage
         </button>
-        {error && <p className="text-xs text-rose-400">{error}</p>}
+        {error && <p style={{ fontSize: 12, color: errorColor, margin: 0 }}>{error}</p>}
       </div>
     )
   }
 
   if (status !== 'approved' || !hasRendered) {
     return (
-      <p className="text-sm text-zinc-500">
+      <p style={{ fontSize: 13, color: SPINLY_BRAND.text.tertiary, margin: 0 }}>
         Le post doit être approuvé et avoir ses 10 slides rendues pour pouvoir être marqué publié.
       </p>
     )
@@ -84,20 +117,44 @@ export default function MarkPublishedButton({
 
   if (showInput) {
     return (
-      <div className="space-y-2">
+      <div style={{ display: 'grid', gap: 8 }}>
         <input
           type="url"
           placeholder="https://www.instagram.com/p/… (optionnel)"
           value={permalink}
           onChange={(e) => setPermalink(e.target.value)}
-          className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded text-zinc-100 text-sm focus:outline-none focus:border-zinc-600"
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            background: SPINLY_BRAND.bg.base,
+            border: `1px solid ${SPINLY_BRAND.border.default}`,
+            borderRadius: 8,
+            color: SPINLY_BRAND.text.primary,
+            fontSize: 13,
+            outline: 'none',
+            minHeight: 44
+          }}
         />
-        <div className="flex gap-2">
+        <div style={{ display: 'flex', gap: 8 }}>
           <button
             type="button"
             onClick={handleMarkPublished}
             disabled={isPending}
-            className="flex-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 rounded text-white text-sm font-medium transition"
+            onMouseEnter={() => setHoverPrimary(true)}
+            onMouseLeave={() => setHoverPrimary(false)}
+            style={{
+              flex: 1,
+              padding: '10px 12px',
+              background: SPINLY_BRAND.gradientWarm,
+              color: '#FFFFFF',
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              border: 'none',
+              cursor: isPending ? 'not-allowed' : 'pointer',
+              opacity: isPending ? 0.5 : hoverPrimary ? 0.9 : 1,
+              minHeight: 44
+            }}
           >
             {isPending ? 'Marquage…' : 'Confirmer "Publié"'}
           </button>
@@ -108,13 +165,26 @@ export default function MarkPublishedButton({
               setError(null)
             }}
             disabled={isPending}
-            className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300 text-sm font-medium transition"
+            onMouseEnter={() => setHoverSecondary(true)}
+            onMouseLeave={() => setHoverSecondary(false)}
+            style={{
+              padding: '10px 12px',
+              background: hoverSecondary ? SPINLY_BRAND.bg.surfaceHover : SPINLY_BRAND.bg.surface,
+              color: SPINLY_BRAND.text.primary,
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 500,
+              border: `1px solid ${SPINLY_BRAND.border.default}`,
+              cursor: isPending ? 'not-allowed' : 'pointer',
+              opacity: isPending ? 0.5 : 1,
+              minHeight: 44
+            }}
           >
             Annuler
           </button>
         </div>
-        {error && <p className="text-xs text-rose-400">{error}</p>}
-        <p className="text-xs text-zinc-500">
+        {error && <p style={{ fontSize: 12, color: errorColor, margin: 0 }}>{error}</p>}
+        <p style={{ fontSize: 12, color: SPINLY_BRAND.text.tertiary, margin: 0 }}>
           Tu peux laisser le lien vide si tu n&apos;as pas encore l&apos;URL Instagram du post.
         </p>
       </div>
@@ -125,7 +195,21 @@ export default function MarkPublishedButton({
     <button
       type="button"
       onClick={() => setShowInput(true)}
-      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white font-medium transition"
+      onMouseEnter={() => setHoverPrimary(true)}
+      onMouseLeave={() => setHoverPrimary(false)}
+      style={{
+        padding: '10px 16px',
+        background: SPINLY_BRAND.gradientWarm,
+        color: '#FFFFFF',
+        borderRadius: 10,
+        fontWeight: 600,
+        fontSize: 13,
+        border: 'none',
+        cursor: 'pointer',
+        opacity: hoverPrimary ? 0.9 : 1,
+        minHeight: 44,
+        transition: 'opacity 0.15s ease'
+      }}
     >
       Marquer comme publié manuellement
     </button>

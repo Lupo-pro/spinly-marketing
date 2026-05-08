@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { SPINLY_BRAND } from '../_styles/brand'
 
 interface Props {
   postId: string
@@ -9,13 +10,24 @@ interface Props {
 
 export default function DownloadZipButton({ postId, hasRendered }: Props) {
   const [downloading, setDownloading] = useState(false)
+  const [hover, setHover] = useState(false)
 
   if (!hasRendered) {
     return (
       <button
         type="button"
         disabled
-        className="px-4 py-2 bg-zinc-800 text-zinc-500 rounded-lg font-medium cursor-not-allowed"
+        style={{
+          padding: '10px 16px',
+          background: SPINLY_BRAND.bg.surface,
+          color: SPINLY_BRAND.text.tertiary,
+          borderRadius: 10,
+          fontWeight: 500,
+          fontSize: 13,
+          border: `1px solid ${SPINLY_BRAND.border.default}`,
+          cursor: 'not-allowed',
+          minHeight: 44
+        }}
       >
         ZIP indisponible (slides non rendues)
       </button>
@@ -24,7 +36,6 @@ export default function DownloadZipButton({ postId, hasRendered }: Props) {
 
   function handleDownload() {
     setDownloading(true)
-    // Native browser download — same-origin, cookies sent automatically.
     window.location.href = `/api/ig/download-zip/${postId}`
     setTimeout(() => setDownloading(false), 3000)
   }
@@ -34,17 +45,37 @@ export default function DownloadZipButton({ postId, hasRendered }: Props) {
       type="button"
       onClick={handleDownload}
       disabled={downloading}
-      className="px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:opacity-90 disabled:opacity-50 rounded-lg text-white font-medium transition inline-flex items-center gap-2"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        padding: '10px 16px',
+        background: SPINLY_BRAND.gradientWarm,
+        color: '#FFFFFF',
+        borderRadius: 10,
+        fontWeight: 600,
+        fontSize: 13,
+        border: 'none',
+        cursor: downloading ? 'not-allowed' : 'pointer',
+        opacity: downloading ? 0.5 : hover ? 0.9 : 1,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 8,
+        minHeight: 44,
+        transition: 'opacity 0.15s ease'
+      }}
     >
       {downloading ? (
         <>
-          <span className="animate-spin">⏳</span>
+          <span aria-hidden style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>
+            ⏳
+          </span>
           Préparation du ZIP…
         </>
       ) : (
         <>
           <svg
-            className="w-4 h-4"
+            width={16}
+            height={16}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

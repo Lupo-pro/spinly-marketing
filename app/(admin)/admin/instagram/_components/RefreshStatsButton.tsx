@@ -53,6 +53,8 @@ export default function RefreshStatsButton() {
         type="button"
         onClick={refresh}
         disabled={loading}
+        aria-label="Rafraîchir les stats"
+        aria-busy={loading}
         style={{
           background: SPINLY_BRAND.bg.surface,
           border: `1px solid ${SPINLY_BRAND.border.hover}`,
@@ -65,7 +67,8 @@ export default function RefreshStatsButton() {
           display: 'inline-flex',
           alignItems: 'center',
           gap: 6,
-          opacity: loading ? 0.6 : 1
+          opacity: loading ? 0.6 : 1,
+          minHeight: 44
         }}
       >
         {loading ? '⏳ Refresh en cours…' : '🔄 Refresh stats maintenant'}

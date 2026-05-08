@@ -276,6 +276,7 @@ export default function PublishButton({
         type="button"
         onClick={publish}
         disabled={isPending || platforms.length === 0}
+        aria-busy={isPending}
         style={{
           background: SPINLY_BRAND.gradientWarm,
           border: 'none',
@@ -286,6 +287,7 @@ export default function PublishButton({
           fontWeight: 700,
           cursor: isPending || platforms.length === 0 ? 'not-allowed' : 'pointer',
           opacity: isPending || platforms.length === 0 ? 0.6 : 1,
+          minHeight: 48,
           transition: 'opacity 0.15s'
         }}
       >
@@ -338,16 +340,19 @@ function ResetStateButton({ postId }: { postId: string }) {
         type="button"
         onClick={reset}
         disabled={isPending}
+        aria-label="Réinitialiser l'état"
+        aria-busy={isPending}
         style={{
           background: SPINLY_BRAND.bg.surface,
           border: `1px solid ${SPINLY_BRAND.border.default}`,
           color: SPINLY_BRAND.text.primary,
-          padding: '8px 14px',
+          padding: '10px 14px',
           borderRadius: 8,
           fontSize: 13,
           fontWeight: 500,
           cursor: isPending ? 'not-allowed' : 'pointer',
-          opacity: isPending ? 0.5 : 1
+          opacity: isPending ? 0.5 : 1,
+          minHeight: 44
         }}
       >
         {isPending ? 'Reset…' : 'Reset state'}
@@ -391,6 +396,8 @@ function RefreshStatusButton({ postId }: { postId: string }) {
         type="button"
         onClick={refresh}
         disabled={isPending}
+        aria-label="Rafraîchir le statut"
+        aria-busy={isPending}
         style={{
           fontSize: 12,
           color: SPINLY_BRAND.text.secondary,
@@ -399,7 +406,9 @@ function RefreshStatusButton({ postId }: { postId: string }) {
           textDecoration: 'underline',
           cursor: isPending ? 'not-allowed' : 'pointer',
           opacity: isPending ? 0.5 : 1,
-          padding: 0
+          padding: '8px 0',
+          minHeight: 32,
+          textAlign: 'left'
         }}
       >
         {isPending ? 'Refresh…' : 'Refresh status'}

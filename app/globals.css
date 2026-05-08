@@ -25,3 +25,65 @@ body {
     text-wrap: balance;
   }
 }
+
+/* WCAG focus rings — keyboard-visible only (Phase 19 P0.2) */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid #F59E2C;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid #F59E2C;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Spin animation used by loading buttons */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive layouts (Phase 19 P0.5) */
+.spinly-pilot-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .spinly-pilot-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+.spinly-calendar-grid {
+  display: grid;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .spinly-calendar-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .spinly-calendar-day {
+    min-height: auto !important;
+  }
+}

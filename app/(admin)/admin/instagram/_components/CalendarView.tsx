@@ -213,10 +213,9 @@ export default function CalendarView({
 
   return (
     <div
+      className="spinly-calendar-grid"
       style={{
-        display: 'grid',
         gridTemplateColumns: `repeat(${horizonDays}, minmax(180px, 1fr))`,
-        gap: 12,
         overflowX: 'auto',
         paddingBottom: 8
       }}
@@ -224,6 +223,7 @@ export default function CalendarView({
       {buckets.map((b) => (
         <div
           key={b.iso}
+          className="spinly-calendar-day"
           style={{
             background: 'rgba(255,255,255,0.02)',
             border: `1px solid ${b.isToday ? SPINLY_BRAND.border.accent : SPINLY_BRAND.border.default}`,

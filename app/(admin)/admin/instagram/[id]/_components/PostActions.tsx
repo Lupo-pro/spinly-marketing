@@ -3,6 +3,9 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { approvePost, rejectPost, regeneratePost } from '../../actions'
+import { SPINLY_BRAND } from '../../_styles/brand'
+
+type Hover = 'approve' | 'reject' | 'regen' | 'submit' | null
 
 export default function PostActions({
   postId,
@@ -15,6 +18,7 @@ export default function PostActions({
   const [pending, startTransition] = useTransition()
   const [showReject, setShowReject] = useState(false)
   const [reason, setReason] = useState('')
+  const [hover, setHover] = useState<Hover>(null)
   const canApprove = status === 'draft'
 
   function handleApprove() {
@@ -42,14 +46,38 @@ export default function PostActions({
     })
   }
 
+  const approvedStatus = SPINLY_BRAND.status.approved
+  const rejectedStatus = SPINLY_BRAND.status.rejected
+
   return (
-    <section className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
-      <div className="flex flex-wrap gap-2">
+    <section
+      style={{
+        background: SPINLY_BRAND.bg.surface,
+        border: `1px solid ${SPINLY_BRAND.border.default}`,
+        borderRadius: 12,
+        padding: 16
+      }}
+    >
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         <button
           type="button"
           onClick={handleApprove}
           disabled={pending || !canApprove}
-          className="px-4 py-2 bg-emerald-500 text-zinc-950 rounded-lg text-sm font-medium hover:bg-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed transition"
+          onMouseEnter={() => setHover('approve')}
+          onMouseLeave={() => setHover(null)}
+          style={{
+            padding: '10px 16px',
+            background: approvedStatus.bg,
+            color: approvedStatus.fg,
+            borderRadius: 10,
+            fontSize: 13,
+            fontWeight: 600,
+            border: `1px solid ${approvedStatus.fg}40`,
+            cursor: pending || !canApprove ? 'not-allowed' : 'pointer',
+            opacity: pending || !canApprove ? 0.4 : hover === 'approve' ? 0.85 : 1,
+            minHeight: 44,
+            transition: 'opacity 0.15s ease'
+          }}
         >
           {pending ? '...' : 'Approuver'}
         </button>
@@ -58,7 +86,21 @@ export default function PostActions({
           type="button"
           onClick={() => setShowReject((v) => !v)}
           disabled={pending}
-          className="px-4 py-2 bg-rose-500/15 text-rose-300 border border-rose-500/30 rounded-lg text-sm font-medium hover:bg-rose-500/25 disabled:opacity-30 transition"
+          onMouseEnter={() => setHover('reject')}
+          onMouseLeave={() => setHover(null)}
+          style={{
+            padding: '10px 16px',
+            background: rejectedStatus.bg,
+            color: rejectedStatus.fg,
+            borderRadius: 10,
+            fontSize: 13,
+            fontWeight: 600,
+            border: `1px solid ${rejectedStatus.fg}40`,
+            cursor: pending ? 'not-allowed' : 'pointer',
+            opacity: pending ? 0.4 : hover === 'reject' ? 0.85 : 1,
+            minHeight: 44,
+            transition: 'opacity 0.15s ease'
+          }}
         >
           Rejeter
         </button>
@@ -67,25 +109,63 @@ export default function PostActions({
           type="button"
           onClick={handleRegenerate}
           disabled={pending}
-          className="px-4 py-2 bg-zinc-800 text-zinc-100 border border-zinc-700 rounded-lg text-sm font-medium hover:bg-zinc-700 disabled:opacity-30 transition"
+          onMouseEnter={() => setHover('regen')}
+          onMouseLeave={() => setHover(null)}
+          style={{
+            padding: '10px 16px',
+            background: hover === 'regen' ? SPINLY_BRAND.bg.surfaceHover : SPINLY_BRAND.bg.surface,
+            color: SPINLY_BRAND.text.primary,
+            borderRadius: 10,
+            fontSize: 13,
+            fontWeight: 600,
+            border: `1px solid ${SPINLY_BRAND.border.default}`,
+            cursor: pending ? 'not-allowed' : 'pointer',
+            opacity: pending ? 0.4 : 1,
+            minHeight: 44,
+            transition: 'background 0.15s ease'
+          }}
         >
           {pending ? 'Régénération...' : 'Régénérer (Claude)'}
         </button>
       </div>
 
       {showReject && (
-        <form onSubmit={handleReject} className="mt-4 flex gap-2">
+        <form onSubmit={handleReject} style={{ marginTop: 16, display: 'flex', gap: 8 }}>
           <input
             type="text"
             placeholder="Raison du rejet..."
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="flex-1 px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm focus:outline-none focus:border-zinc-600"
+            style={{
+              flex: 1,
+              padding: '10px 12px',
+              background: SPINLY_BRAND.bg.base,
+              border: `1px solid ${SPINLY_BRAND.border.default}`,
+              borderRadius: 10,
+              fontSize: 13,
+              color: SPINLY_BRAND.text.primary,
+              outline: 'none',
+              minHeight: 44
+            }}
           />
           <button
             type="submit"
             disabled={pending || !reason.trim()}
-            className="px-4 py-2 bg-rose-500 text-zinc-950 rounded-lg text-sm font-medium hover:bg-rose-400 disabled:opacity-30 transition"
+            onMouseEnter={() => setHover('submit')}
+            onMouseLeave={() => setHover(null)}
+            style={{
+              padding: '10px 16px',
+              background: rejectedStatus.fg,
+              color: '#FFFFFF',
+              borderRadius: 10,
+              fontSize: 13,
+              fontWeight: 600,
+              border: 'none',
+              cursor: pending || !reason.trim() ? 'not-allowed' : 'pointer',
+              opacity: pending || !reason.trim() ? 0.4 : hover === 'submit' ? 0.9 : 1,
+              minHeight: 44,
+              transition: 'opacity 0.15s ease'
+            }}
           >
             Confirmer
           </button>

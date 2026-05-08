@@ -1,5 +1,8 @@
 'use client'
 
+import { useState } from 'react'
+import { SPINLY_BRAND } from '../_styles/brand'
+
 interface Props {
   url: string | null
   postId: string
@@ -9,12 +12,24 @@ interface Props {
 // Direct download of the single PNG. The Storage URL is already public so we
 // don't need a server route — the browser handles `download` attribute on <a>.
 export default function DownloadSinglePngButton({ url, postId, hasRendered }: Props) {
+  const [hover, setHover] = useState(false)
+
   if (!hasRendered || !url) {
     return (
       <button
         type="button"
         disabled
-        className="px-4 py-2 bg-zinc-800 text-zinc-500 rounded-lg font-medium cursor-not-allowed"
+        style={{
+          padding: '10px 16px',
+          background: SPINLY_BRAND.bg.surface,
+          color: SPINLY_BRAND.text.tertiary,
+          borderRadius: 10,
+          fontWeight: 500,
+          fontSize: 13,
+          border: `1px solid ${SPINLY_BRAND.border.default}`,
+          cursor: 'not-allowed',
+          minHeight: 44
+        }}
       >
         PNG indisponible (slide non rendue)
       </button>
@@ -25,9 +40,25 @@ export default function DownloadSinglePngButton({ url, postId, hasRendered }: Pr
     <a
       href={url}
       download={`spinly-${postId.slice(0, 8)}.png`}
-      className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:opacity-90 rounded-lg text-white font-medium transition"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '10px 16px',
+        background: SPINLY_BRAND.gradientWarm,
+        color: '#FFFFFF',
+        borderRadius: 10,
+        fontWeight: 600,
+        fontSize: 13,
+        textDecoration: 'none',
+        opacity: hover ? 0.9 : 1,
+        minHeight: 44,
+        transition: 'opacity 0.15s ease'
+      }}
     >
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <svg width={16} height={16} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"

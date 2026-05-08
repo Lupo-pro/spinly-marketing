@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { SPINLY_BRAND } from '../_styles/brand'
 
 interface Props {
   caption: string
@@ -11,6 +12,8 @@ type CopyTarget = 'caption' | 'hashtags' | 'full'
 
 export default function CaptionBlock({ caption, hashtags }: Props) {
   const [copied, setCopied] = useState<CopyTarget | null>(null)
+  const [hoverPrimary, setHoverPrimary] = useState(false)
+  const [hoverSecondary, setHoverSecondary] = useState<CopyTarget | null>(null)
 
   const captionFull =
     caption + (hashtags.length > 0 ? '\n\n' + hashtags.join(' ') : '')
@@ -19,7 +22,6 @@ export default function CaptionBlock({ caption, hashtags }: Props) {
     try {
       await navigator.clipboard.writeText(text)
     } catch {
-      // Fallback for non-HTTPS / older browsers
       const ta = document.createElement('textarea')
       ta.value = text
       ta.style.position = 'fixed'
@@ -36,40 +38,124 @@ export default function CaptionBlock({ caption, hashtags }: Props) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
-          <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
+    <div style={{ display: 'grid', gap: 16 }}>
+      <div
+        style={{
+          background: SPINLY_BRAND.bg.surface,
+          border: `1px solid ${SPINLY_BRAND.border.default}`,
+          borderRadius: 12,
+          padding: 16
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 12,
+            gap: 12,
+            flexWrap: 'wrap'
+          }}
+        >
+          <h3
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: SPINLY_BRAND.text.secondary,
+              textTransform: 'uppercase',
+              letterSpacing: 1,
+              margin: 0
+            }}
+          >
             Caption + hashtags
           </h3>
           <button
             type="button"
             onClick={() => copyText(captionFull, 'full')}
-            className="px-3 py-1.5 bg-gradient-to-r from-orange-500 to-pink-500 hover:opacity-90 rounded text-white text-sm font-medium transition"
+            onMouseEnter={() => setHoverPrimary(true)}
+            onMouseLeave={() => setHoverPrimary(false)}
+            style={{
+              padding: '8px 14px',
+              background: SPINLY_BRAND.gradientWarm,
+              color: '#FFFFFF',
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              border: 'none',
+              cursor: 'pointer',
+              opacity: hoverPrimary ? 0.9 : 1,
+              minHeight: 36,
+              transition: 'opacity 0.15s ease'
+            }}
           >
             {copied === 'full' ? '✓ Copié' : 'Copier tout'}
           </button>
         </div>
-        <pre className="text-zinc-300 text-sm whitespace-pre-wrap font-sans leading-relaxed max-h-96 overflow-y-auto">
+        <pre
+          style={{
+            color: SPINLY_BRAND.text.primary,
+            fontSize: 13,
+            whiteSpace: 'pre-wrap',
+            fontFamily: 'inherit',
+            lineHeight: 1.6,
+            maxHeight: 384,
+            overflowY: 'auto',
+            margin: 0
+          }}
+        >
           {captionFull}
         </pre>
-        <div className="mt-3 text-xs text-zinc-500">
+        <div style={{ marginTop: 12, fontSize: 11, color: SPINLY_BRAND.text.tertiary }}>
           {captionFull.length} caractères · {hashtags.length} hashtags
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div style={{ display: 'flex', gap: 8 }}>
         <button
           type="button"
           onClick={() => copyText(caption, 'caption')}
-          className="flex-1 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300 text-sm font-medium transition"
+          onMouseEnter={() => setHoverSecondary('caption')}
+          onMouseLeave={() => setHoverSecondary(null)}
+          style={{
+            flex: 1,
+            padding: '10px 12px',
+            background:
+              hoverSecondary === 'caption'
+                ? SPINLY_BRAND.bg.surfaceHover
+                : SPINLY_BRAND.bg.surface,
+            color: SPINLY_BRAND.text.primary,
+            borderRadius: 8,
+            fontSize: 13,
+            fontWeight: 500,
+            border: `1px solid ${SPINLY_BRAND.border.default}`,
+            cursor: 'pointer',
+            minHeight: 44,
+            transition: 'background 0.15s ease'
+          }}
         >
           {copied === 'caption' ? '✓ Caption copiée' : 'Copier caption seule'}
         </button>
         <button
           type="button"
           onClick={() => copyText(hashtags.join(' '), 'hashtags')}
-          className="flex-1 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300 text-sm font-medium transition"
+          onMouseEnter={() => setHoverSecondary('hashtags')}
+          onMouseLeave={() => setHoverSecondary(null)}
+          style={{
+            flex: 1,
+            padding: '10px 12px',
+            background:
+              hoverSecondary === 'hashtags'
+                ? SPINLY_BRAND.bg.surfaceHover
+                : SPINLY_BRAND.bg.surface,
+            color: SPINLY_BRAND.text.primary,
+            borderRadius: 8,
+            fontSize: 13,
+            fontWeight: 500,
+            border: `1px solid ${SPINLY_BRAND.border.default}`,
+            cursor: 'pointer',
+            minHeight: 44,
+            transition: 'background 0.15s ease'
+          }}
         >
           {copied === 'hashtags' ? '✓ Hashtags copiés' : 'Copier hashtags seuls'}
         </button>

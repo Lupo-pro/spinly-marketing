@@ -356,7 +356,7 @@ export default function PilotValidator({ posts: initialPosts }: { posts: PilotPo
 
   return (
     <>
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr)', gap: 24 }}>
+      <div className="spinly-pilot-grid">
         <div
           style={{
             background: SPINLY_BRAND.bg.surface,
@@ -446,11 +446,12 @@ export default function PilotValidator({ posts: initialPosts }: { posts: PilotPo
               background: 'transparent',
               border: `1px dashed ${SPINLY_BRAND.border.hover}`,
               color: SPINLY_BRAND.text.tertiary,
-              padding: 10,
+              padding: '12px 16px',
               borderRadius: 10,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 500,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              minHeight: 44
             }}
           >
             ⏭ Reporter à plus tard
@@ -462,12 +463,16 @@ export default function PilotValidator({ posts: initialPosts }: { posts: PilotPo
               background: SPINLY_BRAND.bg.surface,
               border: `1px solid ${SPINLY_BRAND.border.default}`,
               color: SPINLY_BRAND.text.secondary,
-              padding: 12,
+              padding: '12px 16px',
               borderRadius: 10,
               fontSize: 12,
               fontWeight: 500,
               textAlign: 'center',
-              textDecoration: 'none'
+              textDecoration: 'none',
+              minHeight: 44,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
             ✏️ Édition manuelle (sortir du pilot)
@@ -620,12 +625,13 @@ function NoPostsScreen({ stats, onRefresh }: { stats: Stats; onRefresh: () => vo
           style={{
             background: SPINLY_BRAND.gradientWarm,
             color: '#FFF',
-            padding: '10px 18px',
+            padding: '12px 18px',
             borderRadius: 10,
             fontSize: 13,
             fontWeight: 700,
             border: 'none',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            minHeight: 44
           }}
         >
           🔄 Recharger la liste
@@ -636,11 +642,14 @@ function NoPostsScreen({ stats, onRefresh }: { stats: Stats; onRefresh: () => vo
             background: SPINLY_BRAND.bg.surface,
             border: `1px solid ${SPINLY_BRAND.border.default}`,
             color: SPINLY_BRAND.text.primary,
-            padding: '10px 18px',
+            padding: '12px 18px',
             borderRadius: 10,
             fontSize: 13,
             fontWeight: 700,
-            textDecoration: 'none'
+            textDecoration: 'none',
+            minHeight: 44,
+            display: 'inline-flex',
+            alignItems: 'center'
           }}
         >
           📅 Voir le calendrier

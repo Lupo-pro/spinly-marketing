@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { SPINLY_BRAND } from '../_styles/brand'
 
 export default function SlidesGrid({ urls }: { urls: string[] }) {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
 
   useEffect(() => {
     if (!lightboxUrl) return
@@ -16,7 +18,7 @@ export default function SlidesGrid({ urls }: { urls: string[] }) {
 
   if (urls.length === 0) {
     return (
-      <p className="text-zinc-500 text-sm">
+      <p style={{ color: SPINLY_BRAND.text.secondary, fontSize: 13 }}>
         Aucune slide rendue. Clique sur « Render slides » pour générer les visuels.
       </p>
     )
@@ -24,22 +26,54 @@ export default function SlidesGrid({ urls }: { urls: string[] }) {
 
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+          gap: 12
+        }}
+      >
         {urls.map((url, i) => (
           <button
             type="button"
             key={i}
             onClick={() => setLightboxUrl(url)}
-            className="relative aspect-[4/5] bg-zinc-900 rounded-lg overflow-hidden hover:ring-2 hover:ring-zinc-600 transition"
+            onMouseEnter={() => setHoveredIdx(i)}
+            onMouseLeave={() => setHoveredIdx(null)}
+            style={{
+              position: 'relative',
+              aspectRatio: '4 / 5',
+              background: '#000',
+              borderRadius: 10,
+              overflow: 'hidden',
+              padding: 0,
+              border: `2px solid ${
+                hoveredIdx === i ? SPINLY_BRAND.border.accent : 'transparent'
+              }`,
+              cursor: 'pointer',
+              transition: 'border-color 0.15s ease'
+            }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={url}
               alt={`Slide ${i + 1}`}
-              className="w-full h-full object-cover"
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               loading="lazy"
             />
-            <div className="absolute bottom-1 right-2 text-xs text-white/80 font-mono bg-black/40 px-1 rounded">
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 4,
+                right: 8,
+                fontSize: 11,
+                color: 'rgba(255,255,255,0.85)',
+                fontFamily: 'ui-monospace, monospace',
+                background: 'rgba(0,0,0,0.5)',
+                padding: '2px 6px',
+                borderRadius: 4
+              }}
+            >
               {i + 1}/{urls.length}
             </div>
           </button>
@@ -48,15 +82,50 @@ export default function SlidesGrid({ urls }: { urls: string[] }) {
 
       {lightboxUrl && (
         <div
-          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-8 cursor-pointer"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Aperçu de la slide"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.92)',
+            zIndex: 50,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 32,
+            cursor: 'pointer'
+          }}
           onClick={() => setLightboxUrl(null)}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lightboxUrl} alt="Preview" className="max-w-full max-h-full" />
+          <img
+            src={lightboxUrl}
+            alt="Aperçu"
+            style={{ maxWidth: '100%', maxHeight: '100%' }}
+          />
           <button
             type="button"
-            className="absolute top-4 right-6 text-white/70 hover:text-white text-3xl"
-            aria-label="Close preview"
+            onClick={(e) => {
+              e.stopPropagation()
+              setLightboxUrl(null)
+            }}
+            aria-label="Fermer la preview"
+            style={{
+              position: 'absolute',
+              top: 16,
+              right: 24,
+              background: 'transparent',
+              border: 'none',
+              color: 'rgba(255,255,255,0.85)',
+              fontSize: 32,
+              cursor: 'pointer',
+              minWidth: 44,
+              minHeight: 44,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
           >
             ×
           </button>
