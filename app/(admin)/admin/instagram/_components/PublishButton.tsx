@@ -6,6 +6,8 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import DatePicker from './DatePicker'
 import { SPINLY_BRAND } from '../_styles/brand'
+import { ConfirmModal } from './ui/ConfirmModal'
+import { StatusPill, type StatusKind } from './ui/StatusPill'
 
 const ALL_PLATFORMS: { key: string; icon: string; label: string }[] = [
   { key: 'instagram', icon: '📷', label: 'Instagram' },
@@ -27,26 +29,24 @@ interface Props {
   peDestinations: { platform: string; status: string; permalink?: string }[] | null
 }
 
-function StatusPill({ peStatus }: { peStatus: string }) {
-  const badge =
-    SPINLY_BRAND.status[peStatus as keyof typeof SPINLY_BRAND.status] ?? SPINLY_BRAND.status.draft
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
-        background: badge.bg,
-        color: badge.fg,
-        padding: '4px 10px',
-        borderRadius: 8,
-        fontSize: 12,
-        fontWeight: 600
-      }}
-    >
-      {badge.label}
-    </span>
-  )
+const KNOWN_STATUSES: StatusKind[] = [
+  'draft',
+  'approved',
+  'rejected',
+  'queued',
+  'scheduled',
+  'publishing',
+  'processing',
+  'published',
+  'partial',
+  'failed'
+]
+
+function PeStatusPill({ peStatus }: { peStatus: string }) {
+  const safe: StatusKind = (KNOWN_STATUSES as string[]).includes(peStatus)
+    ? (peStatus as StatusKind)
+    : 'draft'
+  return <StatusPill status={safe} size="md" />
 }
 
 export default function PublishButton({
@@ -100,7 +100,7 @@ export default function PublishButton({
   if (peStatus === 'published' || peStatus === 'partial') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <StatusPill peStatus={peStatus} />
+        <PeStatusPill peStatus={peStatus} />
         {peDestinations && peDestinations.length > 0 && (
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
             {peDestinations.map((d, i) => (
@@ -130,7 +130,7 @@ export default function PublishButton({
   if (peStatus === 'scheduled' && peScheduledFor) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <StatusPill peStatus={peStatus} />
+        <PeStatusPill peStatus={peStatus} />
         <p style={{ fontSize: 13, color: SPINLY_BRAND.text.primary, margin: 0 }}>
           Programmé pour le{' '}
           <strong>
@@ -145,7 +145,7 @@ export default function PublishButton({
   if (peStatus === 'queued' || peStatus === 'publishing') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <StatusPill peStatus={peStatus} />
+        <PeStatusPill peStatus={peStatus} />
         <p style={{ fontSize: 12, color: SPINLY_BRAND.text.secondary, margin: 0 }}>
           La page se rafraîchit automatiquement toutes les 15 secondes.
         </p>
@@ -157,7 +157,7 @@ export default function PublishButton({
   if (peStatus === 'failed') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <StatusPill peStatus="failed" />
+        <PeStatusPill peStatus="failed" />
         {peError && (
           <div
             style={{
@@ -305,15 +305,9 @@ function ResetStateButton({ postId }: { postId: string }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
-  function reset() {
-    if (
-      !confirm(
-        "Reset state PostEverywhere ? Tous les pe_* fields seront vidés. À ne faire que si tu as confirmé sur Instagram qu'aucun post n'a été publié (ou que tu as supprimé les doublons)."
-      )
-    ) {
-      return
-    }
+  function runReset() {
     setError(null)
     startTransition(async () => {
       try {
@@ -338,7 +332,7 @@ function ResetStateButton({ postId }: { postId: string }) {
     <div>
       <button
         type="button"
-        onClick={reset}
+        onClick={() => setConfirmOpen(true)}
         disabled={isPending}
         aria-label="Réinitialiser l'état"
         aria-busy={isPending}
@@ -360,6 +354,15 @@ function ResetStateButton({ postId }: { postId: string }) {
       {error && (
         <p style={{ fontSize: 11, color: '#FCA5A5', margin: '6px 0 0' }}>{error}</p>
       )}
+      <ConfirmModal
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={runReset}
+        title="Reset state PostEverywhere ?"
+        description="Tous les pe_* fields seront vidés. À ne faire que si tu as confirmé sur Instagram qu'aucun post n'a été publié (ou que tu as supprimé les doublons)."
+        confirmLabel="Reset state"
+        variant="destructive"
+      />
     </div>
   )
 }

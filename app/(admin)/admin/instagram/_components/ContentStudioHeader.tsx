@@ -3,22 +3,21 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { SPINLY_BRAND } from '../_styles/brand'
+import { ConfirmModal } from './ui/ConfirmModal'
 
 export default function ContentStudioHeader() {
   const router = useRouter()
   const [generating, setGenerating] = useState(false)
   const [, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
-  async function handleGenerate() {
+  function openConfirm() {
     if (generating) return
-    if (
-      !confirm(
-        'Lancer la génération de nouveaux drafts maintenant ? (~1 min, ~$0.05 d\'API Anthropic)'
-      )
-    ) {
-      return
-    }
+    setConfirmOpen(true)
+  }
+
+  async function runGenerate() {
     setGenerating(true)
     setError(null)
     try {
@@ -102,7 +101,7 @@ export default function ContentStudioHeader() {
           </button>
           <button
             type="button"
-            onClick={handleGenerate}
+            onClick={openConfirm}
             disabled={generating}
             style={{
               background: SPINLY_BRAND.gradientWarm,
@@ -126,6 +125,14 @@ export default function ContentStudioHeader() {
       {error && (
         <p style={{ marginTop: 12, color: '#EF4444', fontSize: 13 }}>❌ {error}</p>
       )}
+      <ConfirmModal
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={runGenerate}
+        title="Lancer la génération maintenant ?"
+        description="~1 min, ~$0.05 d'API Anthropic. De nouveaux drafts apparaîtront dans le studio."
+        confirmLabel="Générer"
+      />
     </div>
   )
 }

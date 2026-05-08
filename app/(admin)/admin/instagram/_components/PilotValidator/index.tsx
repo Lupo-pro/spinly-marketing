@@ -3,7 +3,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { SPINLY_BRAND } from '../_styles/brand'
+import { SPINLY_BRAND } from '../../_styles/brand'
+import { PostPreview } from './PostPreview'
+import { StatsLine } from './StatsLine'
+import { ToastStack } from './ToastStack'
+import { NoPostsScreen } from './NoPostsScreen'
+import type { PilotPost, Stats, Toast } from './types'
+
+export type { PilotPost } from './types'
 
 // Race-condition errors we treat as no-ops (the post was already locked).
 function isBenignDuplicate(error: string | undefined | null): boolean {
@@ -14,167 +21,6 @@ function isBenignDuplicate(error: string | undefined | null): boolean {
     lc.includes('already rejected') ||
     lc.includes('already processing') ||
     lc.includes('concurrent approve')
-  )
-}
-
-export interface PilotPost {
-  id: string
-  caption: string
-  hashtags: string[] | null
-  content_type: 'carousel' | 'single_post' | 'story' | null
-  slides_json: unknown
-  slide_image_urls: string[] | null
-  generated_at: string
-  ig_angles?: { axis: string; hook: string } | null
-}
-
-interface Toast {
-  id: string
-  message: string
-  type: 'error' | 'success'
-}
-
-interface Stats {
-  approved: number
-  rejected: number
-  skipped: number
-  processing: number
-  failed: number
-}
-
-function PostPreview({ post }: { post: PilotPost }) {
-  const ctype = (post.content_type ?? 'carousel') as keyof typeof SPINLY_BRAND.contentType
-  const meta = SPINLY_BRAND.contentType[ctype]
-  const slideUrls = Array.isArray(post.slide_image_urls) ? post.slide_image_urls : []
-  const firstUrl = slideUrls[0]
-  const aspectRatio = ctype === 'story' ? '9 / 16' : '4 / 5'
-
-  let hook = post.caption?.split('\n')[0] || 'Sans titre'
-  try {
-    const slides = (post.slides_json ?? []) as Array<{ type?: string; title?: string }>
-    const first = slides[0]
-    if (first?.type === 'hook' && first.title) hook = first.title
-  } catch {
-    // ignore
-  }
-
-  return (
-    <>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          marginBottom: 14,
-          flexWrap: 'wrap'
-        }}
-      >
-        <span
-          style={{
-            background: meta.bg,
-            color: meta.fg,
-            padding: '4px 10px',
-            borderRadius: 8,
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: 0.5
-          }}
-        >
-          {meta.icon} {meta.label.toUpperCase()}
-        </span>
-        {post.ig_angles && (
-          <span style={{ fontSize: 12, color: SPINLY_BRAND.text.secondary }}>
-            <span style={{ fontFamily: 'monospace' }}>{post.ig_angles.axis}</span> ·{' '}
-            {post.ig_angles.hook}
-          </span>
-        )}
-      </div>
-
-      <div
-        style={{
-          background: '#000',
-          borderRadius: 12,
-          aspectRatio,
-          maxWidth: 420,
-          margin: '0 auto',
-          position: 'relative',
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
-      >
-        {firstUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={firstUrl}
-            alt=""
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : (
-          <div
-            style={{
-              padding: 30,
-              textAlign: 'center',
-              color: SPINLY_BRAND.text.tertiary,
-              fontSize: 13,
-              lineHeight: 1.5
-            }}
-          >
-            ⏳ Pas encore rendu
-            <div style={{ fontSize: 11, marginTop: 10, color: SPINLY_BRAND.text.secondary }}>
-              Le rendering se lancera automatiquement à l’approbation.
-            </div>
-          </div>
-        )}
-        {slideUrls.length > 1 && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 10,
-              right: 12,
-              fontSize: 11,
-              color: 'rgba(255,255,255,0.85)',
-              background: 'rgba(0,0,0,0.5)',
-              padding: '3px 8px',
-              borderRadius: 4
-            }}
-          >
-            1/{slideUrls.length}
-          </div>
-        )}
-      </div>
-
-      <div
-        style={{
-          marginTop: 16,
-          fontSize: 14,
-          fontWeight: 600,
-          lineHeight: 1.4,
-          color: SPINLY_BRAND.text.primary
-        }}
-      >
-        {hook.replace(/\*([^*]+)\*/g, '$1')}
-      </div>
-
-      {post.caption && (
-        <p
-          style={{
-            marginTop: 12,
-            fontSize: 13,
-            color: SPINLY_BRAND.text.secondary,
-            whiteSpace: 'pre-wrap',
-            lineHeight: 1.5,
-            display: '-webkit-box',
-            WebkitLineClamp: 6,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden'
-          }}
-        >
-          {post.caption}
-        </p>
-      )}
-    </>
   )
 }
 
@@ -193,14 +39,10 @@ export default function PilotValidator({ posts: initialPosts }: { posts: PilotPo
   })
   const [toasts, setToasts] = useState<Toast[]>([])
 
-  // The visible queue: server list minus anything already swiped.
   const remainingPosts = useMemo(
     () => initialPosts.filter((p) => !processedIds.has(p.id)),
     [initialPosts, processedIds]
   )
-  // Always validate from the head of the remaining queue. No currentIndex —
-  // skipping just appends to processedIds with a 'skipped' marker so the
-  // post drops out and the next one slides up.
   const post = remainingPosts[0]
 
   const showToast = useCallback((message: string, type: 'error' | 'success' = 'error') => {
@@ -220,8 +62,6 @@ export default function PilotValidator({ posts: initialPosts }: { posts: PilotPo
   }, [])
 
   const handleRefreshQueue = useCallback(() => {
-    // Forget what we processed locally and re-pull the server list. Useful
-    // when a fresh batch was generated mid-session.
     setProcessedIds(new Set())
     router.refresh()
   }, [router])
@@ -230,8 +70,6 @@ export default function PilotValidator({ posts: initialPosts }: { posts: PilotPo
     if (!post) return
     const targetId = post.id
 
-    // Drop the post from the queue immediately — it will never resurface
-    // even if the server response is delayed or the server refreshes.
     consumeId(targetId)
     setStats((s) => ({
       ...s,
@@ -250,9 +88,6 @@ export default function PilotValidator({ posts: initialPosts }: { posts: PilotPo
         if (!res.ok || !data.ok) {
           const errMsg = data?.error ?? `HTTP ${res.status}`
           if (isBenignDuplicate(errMsg)) {
-            // Race condition: backend says it was already approved/locked.
-            // The ID stays in processedIds either way — that's the right
-            // outcome from the user's POV. Just close out the spinner.
             console.log(`[pilot] ${targetId} benign dup: ${errMsg}`)
             setStats((s) => ({ ...s, processing: Math.max(0, s.processing - 1) }))
             return
@@ -510,151 +345,5 @@ function Kbd({ children }: { children: React.ReactNode }) {
     >
       {children}
     </kbd>
-  )
-}
-
-function StatsLine({ stats }: { stats: Stats }) {
-  return (
-    <span style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
-      <span style={{ color: '#4ADE80' }}>✓ {stats.approved}</span>
-      <span style={{ color: SPINLY_BRAND.text.tertiary }}>·</span>
-      <span style={{ color: '#EF4444' }}>✕ {stats.rejected}</span>
-      <span style={{ color: SPINLY_BRAND.text.tertiary }}>·</span>
-      <span style={{ color: SPINLY_BRAND.text.tertiary }}>⏭ {stats.skipped}</span>
-      {stats.processing > 0 && (
-        <>
-          <span style={{ color: SPINLY_BRAND.text.tertiary }}>·</span>
-          <span style={{ color: '#F59E2C', fontWeight: 700 }}>⚙️ {stats.processing}</span>
-        </>
-      )}
-      {stats.failed > 0 && (
-        <>
-          <span style={{ color: SPINLY_BRAND.text.tertiary }}>·</span>
-          <span style={{ color: '#EF4444', fontWeight: 700 }}>⚠ {stats.failed}</span>
-        </>
-      )}
-    </span>
-  )
-}
-
-function ToastStack({ toasts }: { toasts: Toast[] }) {
-  if (toasts.length === 0) return null
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: 20,
-        right: 20,
-        zIndex: 1000,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
-        maxWidth: 400
-      }}
-    >
-      {toasts.map((t) => (
-        <div
-          key={t.id}
-          style={{
-            background:
-              t.type === 'error' ? 'rgba(239, 68, 68, 0.95)' : 'rgba(74, 222, 128, 0.95)',
-            color: '#FFF',
-            padding: '12px 16px',
-            borderRadius: 10,
-            fontSize: 13,
-            fontWeight: 500,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
-            lineHeight: 1.4
-          }}
-        >
-          {t.message}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function NoPostsScreen({ stats, onRefresh }: { stats: Stats; onRefresh: () => void }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 16,
-        padding: '60px 24px',
-        background: SPINLY_BRAND.bg.surface,
-        border: `1px solid ${SPINLY_BRAND.border.default}`,
-        borderRadius: 14
-      }}
-    >
-      <div style={{ fontSize: 48 }}>🎉</div>
-      <h2
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 24,
-          margin: 0
-        }}
-      >
-        Tout est validé !
-      </h2>
-      <p style={{ color: SPINLY_BRAND.text.secondary, margin: 0, fontSize: 14, textAlign: 'center' }}>
-        Cette session :{' '}
-        <span style={{ color: '#4ADE80', fontWeight: 700 }}>✓ {stats.approved}</span> approuvés ·{' '}
-        <span style={{ color: '#EF4444', fontWeight: 700 }}>✕ {stats.rejected}</span> rejetés ·{' '}
-        ⏭ {stats.skipped} skipped.
-        {stats.processing > 0 && (
-          <>
-            <br />
-            <span style={{ color: '#F59E2C' }}>
-              ⚙️ {stats.processing} en cours de traitement en arrière-plan.
-            </span>
-          </>
-        )}
-        {stats.failed > 0 && (
-          <>
-            <br />
-            <span style={{ color: '#EF4444' }}>⚠ {stats.failed} échec(s) — voir les toasts.</span>
-          </>
-        )}
-      </p>
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-        <button
-          type="button"
-          onClick={onRefresh}
-          style={{
-            background: SPINLY_BRAND.gradientWarm,
-            color: '#FFF',
-            padding: '12px 18px',
-            borderRadius: 10,
-            fontSize: 13,
-            fontWeight: 700,
-            border: 'none',
-            cursor: 'pointer',
-            minHeight: 44
-          }}
-        >
-          🔄 Recharger la liste
-        </button>
-        <Link
-          href="/admin/instagram/calendar"
-          style={{
-            background: SPINLY_BRAND.bg.surface,
-            border: `1px solid ${SPINLY_BRAND.border.default}`,
-            color: SPINLY_BRAND.text.primary,
-            padding: '12px 18px',
-            borderRadius: 10,
-            fontSize: 13,
-            fontWeight: 700,
-            textDecoration: 'none',
-            minHeight: 44,
-            display: 'inline-flex',
-            alignItems: 'center'
-          }}
-        >
-          📅 Voir le calendrier
-        </Link>
-      </div>
-    </div>
   )
 }

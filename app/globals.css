@@ -5,6 +5,40 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* SPINLY_BRAND tokens (Phase 19 P1.1) — sync with _styles/brand.ts */
+  --spinly-bg-base: #0A0A0A;
+  --spinly-bg-elevated: rgba(255, 255, 255, 0.03);
+  --spinly-bg-elevated-hover: rgba(255, 255, 255, 0.05);
+  --spinly-bg-elevated-active: rgba(255, 255, 255, 0.08);
+  --spinly-border-subtle: rgba(255, 255, 255, 0.06);
+  --spinly-border-default: rgba(255, 255, 255, 0.10);
+  --spinly-border-hover: rgba(255, 255, 255, 0.12);
+  --spinly-border-accent: rgba(245, 158, 44, 0.4);
+
+  --spinly-fg-primary: #FFFFFF;
+  --spinly-fg-muted: #888888;
+  --spinly-fg-faded: #555555;
+
+  --spinly-brand-yellow: #F5C842;
+  --spinly-brand-orange: #F59E2C;
+  --spinly-brand-red: #FF4500;
+  --spinly-brand-pink: #E91E63;
+  --spinly-gradient-primary: linear-gradient(95deg, #F5C842 0%, #F59E2C 22%, #E91E63 50%, #FF4500 75%, #FFA500 100%);
+  --spinly-gradient-cta: linear-gradient(95deg, #F59E2C 0%, #FF4500 100%);
+
+  --spinly-success: #4ADE80;
+  --spinly-success-bg: rgba(74, 222, 128, 0.12);
+  --spinly-success-border: rgba(74, 222, 128, 0.30);
+  --spinly-error: #EF4444;
+  --spinly-error-bg: rgba(239, 68, 68, 0.12);
+  --spinly-error-border: rgba(239, 68, 68, 0.30);
+  --spinly-warning: #F59E2C;
+  --spinly-warning-bg: rgba(245, 158, 44, 0.12);
+  --spinly-warning-border: rgba(245, 158, 44, 0.30);
+  --spinly-info: #60A5FA;
+  --spinly-info-bg: rgba(96, 165, 250, 0.12);
+  --spinly-info-border: rgba(96, 165, 250, 0.30);
 }
 
 @media (prefers-color-scheme: dark) {

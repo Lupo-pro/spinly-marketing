@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { markAsPublishedAction, unmarkAsPublishedAction } from '../actions'
 import { SPINLY_BRAND } from '../_styles/brand'
+import { ConfirmModal } from './ui/ConfirmModal'
 
 interface Props {
   postId: string
@@ -25,6 +26,7 @@ export default function MarkPublishedButton({
   const [error, setError] = useState<string | null>(null)
   const [hoverPrimary, setHoverPrimary] = useState(false)
   const [hoverSecondary, setHoverSecondary] = useState(false)
+  const [unmarkOpen, setUnmarkOpen] = useState(false)
 
   const errorColor = SPINLY_BRAND.status.failed.fg
   const successColor = SPINLY_BRAND.status.published.fg
@@ -65,14 +67,7 @@ export default function MarkPublishedButton({
         </div>
         <button
           type="button"
-          onClick={() => {
-            if (!confirm('Annuler le marquage "publié" ? Le post repassera en "approved".')) return
-            startTransition(async () => {
-              const r = await unmarkAsPublishedAction(postId)
-              if (!r.ok) setError(r.error)
-              router.refresh()
-            })
-          }}
+          onClick={() => setUnmarkOpen(true)}
           disabled={isPending}
           style={{
             background: 'transparent',
@@ -90,6 +85,21 @@ export default function MarkPublishedButton({
           Annuler le marquage
         </button>
         {error && <p style={{ fontSize: 12, color: errorColor, margin: 0 }}>{error}</p>}
+        <ConfirmModal
+          open={unmarkOpen}
+          onClose={() => setUnmarkOpen(false)}
+          onConfirm={() => {
+            startTransition(async () => {
+              const r = await unmarkAsPublishedAction(postId)
+              if (!r.ok) setError(r.error)
+              router.refresh()
+            })
+          }}
+          title="Annuler le marquage publié ?"
+          description='Le post repassera en statut "approved" et tu pourras le re-publier ou le re-programmer.'
+          confirmLabel="Annuler le marquage"
+          variant="destructive"
+        />
       </div>
     )
   }

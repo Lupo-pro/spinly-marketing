@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { approvePost, rejectPost, regeneratePost } from '../../actions'
 import { SPINLY_BRAND } from '../../_styles/brand'
+import { ConfirmModal } from '../../_components/ui/ConfirmModal'
 
 type Hover = 'approve' | 'reject' | 'regen' | 'submit' | null
 
@@ -19,6 +20,7 @@ export default function PostActions({
   const [showReject, setShowReject] = useState(false)
   const [reason, setReason] = useState('')
   const [hover, setHover] = useState<Hover>(null)
+  const [regenOpen, setRegenOpen] = useState(false)
   const canApprove = status === 'draft'
 
   function handleApprove() {
@@ -38,8 +40,7 @@ export default function PostActions({
     })
   }
 
-  function handleRegenerate() {
-    if (!confirm('Régénérer ce carrousel ? Le contenu actuel sera écrasé.')) return
+  function runRegenerate() {
     startTransition(async () => {
       await regeneratePost(postId)
       router.refresh()
@@ -107,7 +108,7 @@ export default function PostActions({
 
         <button
           type="button"
-          onClick={handleRegenerate}
+          onClick={() => setRegenOpen(true)}
           disabled={pending}
           onMouseEnter={() => setHover('regen')}
           onMouseLeave={() => setHover(null)}
@@ -128,6 +129,16 @@ export default function PostActions({
           {pending ? 'Régénération...' : 'Régénérer (Claude)'}
         </button>
       </div>
+
+      <ConfirmModal
+        open={regenOpen}
+        onClose={() => setRegenOpen(false)}
+        onConfirm={runRegenerate}
+        title="Régénérer ce carrousel ?"
+        description="Le contenu actuel (slides + caption) sera écrasé par une nouvelle génération Claude."
+        confirmLabel="Régénérer"
+        variant="destructive"
+      />
 
       {showReject && (
         <form onSubmit={handleReject} style={{ marginTop: 16, display: 'flex', gap: 8 }}>

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import type { Slide } from '@/lib/instagram/generator'
 import { SPINLY_BRAND } from '../_styles/brand'
+import { StatusPill, type StatusKind } from './ui/StatusPill'
 
 // Defensive: slide_image_urls is meant to be string[], but Supabase JSONB has
 // surprised before (string-encoded JSON, null, etc). Accept the 3 shapes.
@@ -90,10 +91,10 @@ export default function PostCard({ post }: { post: PostCardData }) {
 
   const aspectRatio = contentType === 'story' ? '9 / 16' : '4 / 5'
 
-  const status = post.status as keyof typeof SPINLY_BRAND.status | undefined
-  const statusBadge = status && SPINLY_BRAND.status[status] ? SPINLY_BRAND.status[status] : null
-  const peStatus = post.pe_status as keyof typeof SPINLY_BRAND.status | undefined
-  const peBadge = peStatus && SPINLY_BRAND.status[peStatus] ? SPINLY_BRAND.status[peStatus] : null
+  const status = post.status as StatusKind | undefined
+  const statusValid = status && status in SPINLY_BRAND.status
+  const peStatus = post.pe_status as StatusKind | undefined
+  const peValid = peStatus && peStatus in SPINLY_BRAND.status
 
   return (
     <Link
@@ -194,10 +195,8 @@ export default function PostCard({ post }: { post: PostCardData }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          {statusBadge && (
-            <Badge bg={statusBadge.bg} fg={statusBadge.fg} label={statusBadge.label} />
-          )}
-          {peBadge && <Badge bg={peBadge.bg} fg={peBadge.fg} label={peBadge.label} />}
+          {statusValid && status && <StatusPill status={status} />}
+          {peValid && peStatus && <StatusPill status={peStatus} />}
           {post.pe_status === 'scheduled' && post.pe_scheduled_for && (
             <span style={{ fontSize: 10, color: SPINLY_BRAND.text.secondary }}>
               ·{' '}
