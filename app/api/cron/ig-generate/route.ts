@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/supabase/server'
-import { generateDraft, selectAnglesForGeneration } from '@/lib/instagram/generator'
+import {
+  generateDraft,
+  pickUnderusedTemplates,
+  selectAnglesForGeneration
+} from '@/lib/instagram/generator'
 import { sendTelegramMessage, TG_EMOJIS } from '@/lib/telegram'
 
 export const maxDuration = 300
@@ -59,7 +63,11 @@ export async function GET(req: Request) {
   let totalStories = 0
   for (const angle of angles) {
     try {
-      const draft = await generateDraft(angle)
+      const { singlePostType, storyType } = await pickUnderusedTemplates(angle.axis)
+      const draft = await generateDraft(angle, {
+        preferSinglePostType: singlePostType,
+        preferStoryType: storyType
+      })
 
       // 1. Insert the carousel (always present after validation passed).
       const { data: carouselPost, error: carouselErr } = await supabase

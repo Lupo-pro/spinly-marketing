@@ -356,11 +356,73 @@ HASHTAGS (12-15) :
 // Génération
 // =============================================================================
 
-export async function generateDraft(angle: {
-  axis: string
-  hook: string
-  thesis: string
-}): Promise<GeneratedDraft> {
+// Phase 19.5 — pick a single_post / story template that is under-used for the
+// given axis, so we don't keep getting `stat_bombe` on every google_algo post
+// or `story_question` on every anti_agencias post. Scans the last 20 published
+// posts of the axis, picks the slide-type with the lowest count (random tie-
+// break). Cheap query (1 row scan, axis bank is small).
+export async function pickUnderusedTemplates(axis: string): Promise<{
+  singlePostType: SinglePostType
+  storyType: StoryType
+}> {
+  const supabase = getServerSupabase()
+  const { data } = await supabase
+    .from('ig_posts')
+    .select('content_type, slides_json, ig_angles!inner(axis)')
+    .eq('ig_angles.axis', axis)
+    .order('generated_at', { ascending: false })
+    .limit(20)
+
+  const singleCounts: Record<string, number> = {}
+  const storyCounts: Record<string, number> = {}
+  for (const p of data ?? []) {
+    const slides = Array.isArray(p.slides_json) ? p.slides_json : []
+    const t = (slides[0] as { type?: string } | undefined)?.type
+    if (!t) continue
+    if (
+      p.content_type === 'single_post' &&
+      (SINGLE_POST_TYPES as readonly string[]).includes(t)
+    ) {
+      singleCounts[t] = (singleCounts[t] ?? 0) + 1
+    } else if (
+      p.content_type === 'story' &&
+      (STORY_TYPES as readonly string[]).includes(t)
+    ) {
+      storyCounts[t] = (storyCounts[t] ?? 0) + 1
+    }
+  }
+
+  const pickLeast = <T extends string>(
+    types: readonly T[],
+    counts: Record<string, number>
+  ): T => {
+    const min = Math.min(...types.map((t) => counts[t] ?? 0))
+    const candidates = types.filter((t) => (counts[t] ?? 0) === min)
+    return candidates[Math.floor(Math.random() * candidates.length)]
+  }
+
+  return {
+    singlePostType: pickLeast(SINGLE_POST_TYPES, singleCounts),
+    storyType: pickLeast(STORY_TYPES, storyCounts)
+  }
+}
+
+export interface GenerateDraftOptions {
+  // When set, force Haiku to use these template types for the standalone
+  // single_post / story slide. Used by the cron to break per-axis
+  // template lock-in (Phase 19.5).
+  preferSinglePostType?: SinglePostType
+  preferStoryType?: StoryType
+}
+
+export async function generateDraft(
+  angle: {
+    axis: string
+    hook: string
+    thesis: string
+  },
+  options: GenerateDraftOptions = {}
+): Promise<GeneratedDraft> {
   // Phase 17 — fetch the last 3 hooks of the same axis so Haiku knows which
   // patterns to avoid. Best-effort: any DB error or missing column degrades
   // silently to "no recent_hooks context" and we generate normally.
@@ -403,11 +465,26 @@ export async function generateDraft(angle: {
     )
   }
 
+  // Phase 19.5 — template rotation hint. If the cron pre-picked a least-used
+  // template type for this axis, we inject it here as an OVERRIDE so Haiku
+  // stops defaulting to stat_bombe / story_question on every post.
+  const templateOverrideBlock =
+    options.preferSinglePostType || options.preferStoryType
+      ? `\n\n## TEMPLATES IMPOSÉS POUR CETTE GÉNÉRATION (rotation pour cet axe)\n` +
+        (options.preferSinglePostType
+          ? `- single_post.type DOIT être "${options.preferSinglePostType}" (sous-utilisé pour cet axe).\n`
+          : '') +
+        (options.preferStoryType
+          ? `- story.type DOIT être "${options.preferStoryType}" (sous-utilisé pour cet axe).\n`
+          : '') +
+        `Adapte le contenu à ces templates ; n'override PAS la consigne.\n`
+      : ''
+
   const userPrompt = `Génère un carrousel Instagram pour Spinly basé sur cet angle :
 
 AXE : ${angle.axis}
 HOOK IMPOSÉ (peux le reformuler légèrement mais garder l'angle) : ${angle.hook}
-THÈSE : ${angle.thesis}${recentHooksBlock}
+THÈSE : ${angle.thesis}${recentHooksBlock}${templateOverrideBlock}
 
 ${STRUCTURE_RULES}
 
@@ -569,34 +646,80 @@ Tous partagent les MÊMES caption et hashtags (pas besoin de les répéter).`
 // Sélection des angles à utiliser
 // =============================================================================
 
+// When all active angles of an axis have been used at least this many times,
+// we reactivate previously deactivated angles for that axis to inject fresh
+// hooks into the rotation. Tweak based on bank growth / generation cadence.
+const REACTIVATION_THRESHOLD = 2
+
 export async function selectAnglesForGeneration(count: number = 4) {
   const supabase = getServerSupabase()
-  const fourteenDaysAgo = new Date(Date.now() - 14 * 86400_000).toISOString()
 
-  // Fetch all eligible angles (the bank is small, ~50 rows). We need the full
-  // pool so the per-axis balance below has something to diversify against —
-  // limiting upfront breaks balance when many candidates share the same axis.
-  const { data, error } = await supabase
-    .from('ig_angles')
-    .select('*')
-    .eq('active', true)
-    .or(`last_used_at.is.null,last_used_at.lt.${fourteenDaysAgo}`)
-    .order('last_used_at', { ascending: true, nullsFirst: true })
-
+  // Bank is small (~100 rows). Fetch everything so we can compute per-axis
+  // exhaustion and reactivate inactives ourselves before selecting.
+  const { data: all, error } = await supabase.from('ig_angles').select('*')
   if (error) throw error
-  if (!data || data.length === 0) return []
+  if (!all || all.length === 0) return []
 
-  // Balance par axe : max 1 par axe par batch.
-  const seen = new Set<string>()
-  const selected: typeof data = []
-  for (const angle of data) {
+  // Per-axis exhaustion check : if an axis has no active angle, OR all its
+  // active angles have used_count >= threshold, flip its inactive angles back
+  // on so the rotation keeps producing fresh content instead of looping.
+  const minUsedActiveByAxis = new Map<string, number>()
+  const inactiveIdsByAxis = new Map<string, string[]>()
+  for (const a of all) {
+    if (a.active) {
+      const used = a.used_count ?? 0
+      const cur = minUsedActiveByAxis.get(a.axis)
+      if (cur === undefined || used < cur) minUsedActiveByAxis.set(a.axis, used)
+    } else {
+      const arr = inactiveIdsByAxis.get(a.axis) ?? []
+      arr.push(a.id)
+      inactiveIdsByAxis.set(a.axis, arr)
+    }
+  }
+
+  const idsToReactivate: string[] = []
+  inactiveIdsByAxis.forEach((ids, axis) => {
+    const minUsed = minUsedActiveByAxis.get(axis)
+    if (minUsed === undefined || minUsed >= REACTIVATION_THRESHOLD) {
+      idsToReactivate.push(...ids)
+    }
+  })
+  if (idsToReactivate.length > 0) {
+    const { error: reactErr } = await supabase
+      .from('ig_angles')
+      .update({ active: true })
+      .in('id', idsToReactivate)
+    if (reactErr) {
+      console.warn('[selectAngles] reactivation failed:', reactErr.message)
+    } else {
+      for (const a of all) if (idsToReactivate.includes(a.id)) a.active = true
+    }
+  }
+
+  // Sort eligible (active) by used_count ASC, then last_used_at ASC (nulls
+  // first — never-used angles win). This is the rotation priority.
+  const eligible = all
+    .filter((a) => a.active)
+    .sort((a, b) => {
+      const u = (a.used_count ?? 0) - (b.used_count ?? 0)
+      if (u !== 0) return u
+      const at = a.last_used_at ? new Date(a.last_used_at).getTime() : 0
+      const bt = b.last_used_at ? new Date(b.last_used_at).getTime() : 0
+      return at - bt
+    })
+
+  // Max 1 angle per axis per batch.
+  const seenAxis = new Set<string>()
+  const selected: typeof eligible = []
+  for (const angle of eligible) {
     if (selected.length >= count) break
-    if (seen.has(angle.axis)) continue
-    seen.add(angle.axis)
+    if (seenAxis.has(angle.axis)) continue
+    seenAxis.add(angle.axis)
     selected.push(angle)
   }
-  // Compléter si pas assez d'axes différents.
-  for (const angle of data) {
+  // Fallback : si moins d'axes différents que count, on tolère le doublon
+  // (préserve le comportement existant — préférence stricte = sortir vide).
+  for (const angle of eligible) {
     if (selected.length >= count) break
     if (!selected.includes(angle)) selected.push(angle)
   }
