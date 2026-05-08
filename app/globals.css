@@ -41,6 +41,33 @@
   --spinly-info-border: rgba(96, 165, 250, 0.30);
 }
 
+/* Light theme override (Phase 19 P3.3) — applied via [data-theme="light"] on <html> */
+[data-theme="light"] {
+  --spinly-bg-base: #FAFAFA;
+  --spinly-bg-elevated: rgba(0, 0, 0, 0.04);
+  --spinly-bg-elevated-hover: rgba(0, 0, 0, 0.06);
+  --spinly-bg-elevated-active: rgba(0, 0, 0, 0.09);
+  --spinly-border-subtle: rgba(0, 0, 0, 0.06);
+  --spinly-border-default: rgba(0, 0, 0, 0.12);
+  --spinly-border-hover: rgba(0, 0, 0, 0.18);
+  --spinly-border-accent: rgba(245, 158, 44, 0.5);
+
+  --spinly-fg-primary: #0A0A0A;
+  --spinly-fg-muted: #555555;
+  --spinly-fg-faded: #888888;
+
+  --spinly-success-bg: rgba(34, 197, 94, 0.12);
+  --spinly-success-border: rgba(34, 197, 94, 0.35);
+  --spinly-error-bg: rgba(239, 68, 68, 0.10);
+  --spinly-error-border: rgba(239, 68, 68, 0.35);
+  --spinly-warning-bg: rgba(245, 158, 44, 0.14);
+  --spinly-warning-border: rgba(245, 158, 44, 0.40);
+  --spinly-info-bg: rgba(37, 99, 235, 0.10);
+  --spinly-info-border: rgba(37, 99, 235, 0.35);
+  --spinly-info: #2563EB;
+  --spinly-success: #16A34A;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -92,6 +119,12 @@ a:focus-visible {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* Skeleton loader pulse (Phase 19 P3.2) */
+@keyframes spinly-skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* Responsive layouts (Phase 19 P0.5) */

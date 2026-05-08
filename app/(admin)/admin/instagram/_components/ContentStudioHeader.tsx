@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { RefreshCw, Sparkles } from 'lucide-react'
 import { SPINLY_BRAND } from '../_styles/brand'
 import { ConfirmModal } from './ui/ConfirmModal'
+import { SPINLY_GENERATE_EVENT } from '../_hooks/useGlobalShortcuts'
 
 export default function ContentStudioHeader() {
   const router = useRouter()
@@ -17,6 +18,14 @@ export default function ContentStudioHeader() {
     if (generating) return
     setConfirmOpen(true)
   }
+
+  useEffect(() => {
+    function onGenerate() {
+      if (!generating) setConfirmOpen(true)
+    }
+    window.addEventListener(SPINLY_GENERATE_EVENT, onGenerate)
+    return () => window.removeEventListener(SPINLY_GENERATE_EVENT, onGenerate)
+  }, [generating])
 
   async function runGenerate() {
     setGenerating(true)
