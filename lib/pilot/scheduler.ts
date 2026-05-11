@@ -6,8 +6,16 @@ import { getServerSupabase } from '@/lib/supabase/server'
 // as 'HH:MM' strings, daily quotas are computed against Bogotá calendar days.
 const TZ = 'America/Bogota'
 
-// 30 min around an existing slot is treated as occupied. Two posts back-to-back
-// look weird and the platforms throttle anyway.
+// Hard scheduling rule: 2 posts per day, total, across all content types,
+// at exactly these Bogotá-local times. Overrides any per-type slots/quotas
+// that may still live in pilot_settings (kept for backward compatibility but
+// no longer consulted for slot/quota decisions — see findNextSlot below).
+export const SHARED_SLOTS = ['08:00', '12:00'] as const
+export const MAX_POSTS_PER_DAY = 2
+
+// 30 min around an existing slot is treated as occupied. Catches legacy posts
+// scheduled at off-grid times (e.g. 07:50) that would otherwise sit next to
+// a new 08:00 slot.
 const SLOT_OCCUPATION_TOLERANCE_MIN = 30
 
 // Don't schedule a post sooner than this many minutes from now — gives PE
@@ -46,23 +54,6 @@ export async function getPilotSettings(): Promise<PilotSettings> {
   return data as PilotSettings
 }
 
-interface OccupiedSlot {
-  scheduled_utc: Date
-  content_type: PilotContentType
-}
-
-function pickSlots(settings: PilotSettings, type: PilotContentType): string[] {
-  if (type === 'carousel') return settings.carousel_slots
-  if (type === 'single_post') return settings.single_post_slots
-  return settings.story_slots
-}
-
-function pickQuota(settings: PilotSettings, type: PilotContentType): number {
-  if (type === 'carousel') return settings.max_carousels_per_day
-  if (type === 'single_post') return settings.max_single_posts_per_day
-  return settings.max_stories_per_day
-}
-
 function pickPlatforms(settings: PilotSettings, type: PilotContentType): string[] {
   const csv =
     type === 'carousel'
@@ -93,10 +84,7 @@ function utcForSlot(bogotaDay: Date, slotStr: string): Date {
   return fromZonedTime(slotZoned, TZ)
 }
 
-export async function findNextSlot(
-  contentType: PilotContentType,
-  fromDate: Date = new Date()
-): Promise<Date | null> {
+export async function findNextSlot(fromDate: Date = new Date()): Promise<Date | null> {
   const settings = await getPilotSettings()
   const supabase = getServerSupabase()
 
@@ -106,78 +94,36 @@ export async function findNextSlot(
   // so we account for slots reserved before PE has confirmed the schedule.
   const { data: occupied } = await supabase
     .from('ig_posts')
-    .select('pilot_scheduled_at, content_type')
+    .select('pilot_scheduled_at')
     .gte('pilot_scheduled_at', fromDate.toISOString())
     .lte('pilot_scheduled_at', horizonEnd.toISOString())
     .not('pilot_scheduled_at', 'is', null)
 
-  const occupiedSlots: OccupiedSlot[] = (occupied ?? [])
-    .filter((s) => s.pilot_scheduled_at && s.content_type)
-    .map((s) => ({
-      scheduled_utc: parseISO(s.pilot_scheduled_at as string),
-      content_type: s.content_type as PilotContentType
-    }))
+  const occupiedDates: Date[] = (occupied ?? [])
+    .filter((s) => s.pilot_scheduled_at)
+    .map((s) => parseISO(s.pilot_scheduled_at as string))
 
-  const slotStrings = pickSlots(settings, contentType)
-  const maxPerDay = pickQuota(settings, contentType)
-  const minSpacingMs = settings.min_hours_between_same_type * 60 * 60 * 1000
   const minLead = addMinutes(fromDate, MIN_LEAD_MINUTES)
   const tolMs = SLOT_OCCUPATION_TOLERANCE_MIN * 60 * 1000
 
-  function trySlotInDay(day: Date, dayKey: string): Date | null {
-    const sameTypeOnDay = occupiedSlots.filter(
-      (s) => s.content_type === contentType && bogotaDayKey(s.scheduled_utc) === dayKey
-    )
-    if (sameTypeOnDay.length >= maxPerDay) return null
+  for (let dayOffset = 0; dayOffset <= settings.scheduling_horizon_days; dayOffset++) {
+    const day = addDays(fromDate, dayOffset)
+    const dayKey = bogotaDayKey(day)
 
-    for (const slotStr of slotStrings) {
+    const countOnDay = occupiedDates.filter((d) => bogotaDayKey(d) === dayKey).length
+    if (countOnDay >= MAX_POSTS_PER_DAY) continue
+
+    for (const slotStr of SHARED_SLOTS) {
       const slotUtc = utcForSlot(day, slotStr)
-      const slotZoned = toZonedTime(slotUtc, TZ)
-      if (
-        slotZoned.getHours() < settings.earliest_hour ||
-        slotZoned.getHours() > settings.latest_hour
-      ) {
-        continue
-      }
       if (isBefore(slotUtc, minLead)) continue
 
-      const isOccupied = occupiedSlots.some(
-        (s) => Math.abs(s.scheduled_utc.getTime() - slotUtc.getTime()) < tolMs
+      const isOccupied = occupiedDates.some(
+        (d) => Math.abs(d.getTime() - slotUtc.getTime()) < tolMs
       )
       if (isOccupied) continue
 
-      const tooClose = sameTypeOnDay.some(
-        (s) => Math.abs(s.scheduled_utc.getTime() - slotUtc.getTime()) < minSpacingMs
-      )
-      if (tooClose) continue
-
       return slotUtc
     }
-    return null
-  }
-
-  // PASS 1 — favor a true daily mix. Skip days that already have ≥1 of this
-  // content type, even if they're under the daily quota. Result: a
-  // carousel/post/story batch ends up spread across distinct days first.
-  for (let dayOffset = 0; dayOffset <= settings.scheduling_horizon_days; dayOffset++) {
-    const day = addDays(fromDate, dayOffset)
-    const dayKey = bogotaDayKey(day)
-    const sameTypeCount = occupiedSlots.filter(
-      (s) => s.content_type === contentType && bogotaDayKey(s.scheduled_utc) === dayKey
-    ).length
-    if (sameTypeCount > 0) continue
-
-    const slot = trySlotInDay(day, dayKey)
-    if (slot) return slot
-  }
-
-  // PASS 2 — fallback. Allow stacking on a day that already has the same
-  // type as long as we're under the daily quota and spacing rules.
-  for (let dayOffset = 0; dayOffset <= settings.scheduling_horizon_days; dayOffset++) {
-    const day = addDays(fromDate, dayOffset)
-    const dayKey = bogotaDayKey(day)
-    const slot = trySlotInDay(day, dayKey)
-    if (slot) return slot
   }
 
   return null
@@ -200,7 +146,7 @@ export async function pilotSchedulePost(
   if (error || !post) throw new Error(`Post not found: ${error?.message ?? postId}`)
 
   const contentType = (post.content_type ?? 'carousel') as PilotContentType
-  const slot = await findNextSlot(contentType)
+  const slot = await findNextSlot()
   if (!slot) throw new Error('No slot available in scheduling horizon')
 
   const platforms = await getPlatformsForType(contentType)

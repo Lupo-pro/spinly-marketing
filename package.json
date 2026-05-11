@@ -11,7 +11,8 @@
     "dev:node22": "PATH=/opt/homebrew/opt/node@22/bin:$PATH npx next dev",
     "seed:angles": "tsx --env-file=.env.local scripts/seed-ig-angles.ts",
     "test:render": "tsx --env-file=.env.local scripts/test-render.ts",
-    "setup:ig-account": "tsx --env-file=.env.local scripts/setup-ig-account.ts"
+    "setup:ig-account": "tsx --env-file=.env.local scripts/setup-ig-account.ts",
+    "calendar:rebalance": "tsx --env-file=.env.local scripts/rebalance-pilot-calendar.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.94.0",
