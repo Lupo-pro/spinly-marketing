@@ -2,17 +2,28 @@ import { createClient } from '@supabase/supabase-js'
 import { addDays, addMinutes, parseISO, set } from 'date-fns'
 import { toZonedTime, fromZonedTime } from 'date-fns-tz'
 
-// Rebalance the pilot calendar so every Bogotá day has ≤ 2 posts, scheduled at
-// 08:00 and 12:00 Bogotá-local. Posts already published are left untouched.
-// Surplus posts cascade forward to the next free (day, slot).
+// Rebalance the pilot calendar around the per-type slot rotation:
+//   carousel    → 08:00 Bogotá
+//   single_post → 12:00 Bogotá
+//   story       → 18:00 Bogotá
+// ≤ 1 post per content_type per day, ≤ 3 posts/day. If a type has no draft for
+// a given day, that slot stays empty (we never duplicate a type). Posts already
+// published are left untouched. Surplus posts cascade forward to the next free
+// (day, type-slot) pair.
 //
 // Usage:
 //   tsx --env-file=.env.local scripts/rebalance-pilot-calendar.ts            # apply
 //   tsx --env-file=.env.local scripts/rebalance-pilot-calendar.ts --dry-run  # preview
 
 const TZ = 'America/Bogota'
-const SHARED_SLOTS = ['08:00', '12:00'] as const
-const MAX_POSTS_PER_DAY = 2
+
+type ContentType = 'carousel' | 'single_post' | 'story'
+
+const TYPE_SLOTS: Record<ContentType, string> = {
+  carousel: '08:00',
+  single_post: '12:00',
+  story: '18:00'
+}
 const MIN_LEAD_MINUTES = 30
 // Wider than the scheduler's 7-day horizon: a large overflow may need weeks
 // of room to land.
@@ -25,6 +36,7 @@ const supabase = createClient(
 
 interface Post {
   id: string
+  content_type: ContentType | null
   pilot_scheduled_at: string
   pilot_published_at: string | null
   pe_status: string | null
@@ -54,6 +66,10 @@ function isPublished(p: Post): boolean {
   )
 }
 
+function typeOf(p: Post): ContentType {
+  return (p.content_type ?? 'carousel') as ContentType
+}
+
 function formatBogota(d: Date): string {
   return d.toLocaleString('fr-FR', {
     weekday: 'short',
@@ -72,7 +88,9 @@ async function main() {
 
   const { data: allPosts, error } = await supabase
     .from('ig_posts')
-    .select('id, pilot_scheduled_at, pilot_published_at, pe_status, pe_post_id, status')
+    .select(
+      'id, content_type, pilot_scheduled_at, pilot_published_at, pe_status, pe_post_id, status'
+    )
     .not('pilot_scheduled_at', 'is', null)
     .order('pilot_scheduled_at', { ascending: true })
 
@@ -86,25 +104,15 @@ async function main() {
     `Found ${posts.length} scheduled posts: ${published.length} published (locked), ${unpublished.length} pending\n`
   )
 
-  // dayCount = how many posts are anchored to a given Bogotá day (any time).
-  // slotTaken = exact (day,slot) instants we've consumed and cannot reuse.
-  // Both are pre-seeded with published posts so we never collide with history.
-  const dayCount = new Map<string, number>()
-  const slotTaken = new Set<string>()
-  const bump = (dayKey: string) =>
-    dayCount.set(dayKey, (dayCount.get(dayKey) ?? 0) + 1)
+  // typeUsed = (day, contentType) pairs that are already occupied. Pre-seeded
+  // with published posts so we never collide with history. An unpublished post
+  // can only land on a (day, type) pair not in this set.
+  const typeUsed = new Set<string>()
+  const typeKey = (dayKey: string, t: ContentType) => `${dayKey}#${t}`
 
   for (const p of published) {
     const d = parseISO(p.pilot_scheduled_at)
-    const dayKey = bogotaDayKey(d)
-    bump(dayKey)
-    const z = toZonedTime(d, TZ)
-    const hh = String(z.getHours()).padStart(2, '0')
-    const mm = String(z.getMinutes()).padStart(2, '0')
-    const slotStr = `${hh}:${mm}`
-    if ((SHARED_SLOTS as readonly string[]).includes(slotStr)) {
-      slotTaken.add(`${dayKey}@${slotStr}`)
-    }
+    typeUsed.add(typeKey(bogotaDayKey(d), typeOf(p)))
   }
 
   // Group unpublished by their original Bogotá day, sorted within each day.
@@ -129,51 +137,46 @@ async function main() {
     to: string
     originalDayKey: string
     movedDays: boolean
+    contentType: ContentType
     pe_post_id: string | null
   }
   const plan: Assignment[] = []
   const overflow: { post: Post; originalDayKey: string }[] = []
 
-  // PASS 1 — keep up to MAX_POSTS_PER_DAY on their original day; spill the rest.
+  // PASS 1 — keep each post on its original day if its type slot is free; else
+  // spill into the overflow queue for cascade placement.
   const sortedDayKeys = Array.from(byDay.keys()).sort()
   for (const dayKey of sortedDayKeys) {
     const dayPosts = byDay.get(dayKey)!
     const dayDate = parseISO(dayPosts[0].pilot_scheduled_at)
 
     for (const post of dayPosts) {
-      if ((dayCount.get(dayKey) ?? 0) >= MAX_POSTS_PER_DAY) {
+      const ct = typeOf(post)
+      const key = typeKey(dayKey, ct)
+      if (typeUsed.has(key)) {
         overflow.push({ post, originalDayKey: dayKey })
         continue
       }
-      let assigned: Date | null = null
-      for (const slotStr of SHARED_SLOTS) {
-        const slotKey = `${dayKey}@${slotStr}`
-        if (slotTaken.has(slotKey)) continue
-        const slotUtc = utcForSlot(dayDate, slotStr)
-        if (slotUtc < minLead) continue
-        assigned = slotUtc
-        slotTaken.add(slotKey)
-        bump(dayKey)
-        break
-      }
-      if (assigned) {
-        plan.push({
-          id: post.id,
-          from: post.pilot_scheduled_at,
-          to: assigned.toISOString(),
-          originalDayKey: dayKey,
-          movedDays: false,
-          pe_post_id: post.pe_post_id
-        })
-      } else {
-        // Original day fully past (or its slots already taken by published).
-        // Push to next-available-day handling.
+      const slotUtc = utcForSlot(dayDate, TYPE_SLOTS[ct])
+      if (slotUtc < minLead) {
         overflow.push({ post, originalDayKey: dayKey })
+        continue
       }
+      typeUsed.add(key)
+      plan.push({
+        id: post.id,
+        from: post.pilot_scheduled_at,
+        to: slotUtc.toISOString(),
+        originalDayKey: dayKey,
+        movedDays: false,
+        contentType: ct,
+        pe_post_id: post.pe_post_id
+      })
     }
   }
 
-  // PASS 2 — cascade overflow forward in original chronological order.
+  // PASS 2 — cascade overflow forward, preserving content_type. Each post lands
+  // on the nearest future day where its (day, type) slot is still free.
   overflow.sort(
     (a, b) =>
       new Date(a.post.pilot_scheduled_at).getTime() -
@@ -181,28 +184,26 @@ async function main() {
   )
 
   for (const { post, originalDayKey } of overflow) {
+    const ct = typeOf(post)
     // Anchor at noon UTC of the original day so addDays() stays inside the
     // intended calendar day under any DST/offset edge.
     const anchor = parseISO(`${originalDayKey}T12:00:00Z`)
     let assigned: Date | null = null
+    let assignedDayKey = ''
     for (let offset = 1; offset <= HORIZON_DAYS && !assigned; offset++) {
       const day = addDays(anchor, offset)
       const dayKey = bogotaDayKey(day)
-      if ((dayCount.get(dayKey) ?? 0) >= MAX_POSTS_PER_DAY) continue
-      for (const slotStr of SHARED_SLOTS) {
-        const slotKey = `${dayKey}@${slotStr}`
-        if (slotTaken.has(slotKey)) continue
-        const slotUtc = utcForSlot(day, slotStr)
-        if (slotUtc < minLead) continue
-        assigned = slotUtc
-        slotTaken.add(slotKey)
-        bump(dayKey)
-        break
-      }
+      const key = typeKey(dayKey, ct)
+      if (typeUsed.has(key)) continue
+      const slotUtc = utcForSlot(day, TYPE_SLOTS[ct])
+      if (slotUtc < minLead) continue
+      assigned = slotUtc
+      assignedDayKey = dayKey
+      typeUsed.add(key)
     }
     if (!assigned) {
       console.error(
-        `  ✗ ${post.id} (originally ${originalDayKey}) — no free slot within ${HORIZON_DAYS} days`
+        `  ✗ ${post.id} (${ct}, originally ${originalDayKey}) — no free slot within ${HORIZON_DAYS} days`
       )
       continue
     }
@@ -211,7 +212,8 @@ async function main() {
       from: post.pilot_scheduled_at,
       to: assigned.toISOString(),
       originalDayKey,
-      movedDays: bogotaDayKey(assigned) !== originalDayKey,
+      movedDays: assignedDayKey !== originalDayKey,
+      contentType: ct,
       pe_post_id: post.pe_post_id
     })
   }
@@ -239,7 +241,10 @@ async function main() {
     const toStr = formatBogota(parseISO(p.to))
     const marker = p.from === p.to ? '·' : p.movedDays ? '⇒' : '→'
     const peTag = p.pe_post_id ? ' [PE]' : ''
-    console.log(`  ${marker} ${p.id.slice(0, 8)}  ${fromStr}  →  ${toStr}${peTag}`)
+    const typeTag = p.contentType.padEnd(11)
+    console.log(
+      `  ${marker} ${p.id.slice(0, 8)}  ${typeTag} ${fromStr}  →  ${toStr}${peTag}`
+    )
   }
 
   if (dryRun) {

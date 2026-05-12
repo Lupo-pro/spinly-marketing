@@ -651,14 +651,22 @@ Tous partagent les MÊMES caption et hashtags (pas besoin de les répéter).`
 // hooks into the rotation. Tweak based on bank growth / generation cadence.
 const REACTIVATION_THRESHOLD = 2
 
+// Axes we never generate content for. The @spinly.lat IG account speaks to
+// dueños de comercios, not to Spinly's vendedores — the vendedor banque lives
+// in DB for historical reasons but must stay out of the rotation, including
+// the auto-reactivation pass.
+const EXCLUDED_AXES = new Set(['vendedor'])
+
 export async function selectAnglesForGeneration(count: number = 4) {
   const supabase = getServerSupabase()
 
   // Bank is small (~100 rows). Fetch everything so we can compute per-axis
   // exhaustion and reactivate inactives ourselves before selecting.
-  const { data: all, error } = await supabase.from('ig_angles').select('*')
+  const { data: rawAll, error } = await supabase.from('ig_angles').select('*')
   if (error) throw error
-  if (!all || all.length === 0) return []
+  if (!rawAll || rawAll.length === 0) return []
+  const all = rawAll.filter((a) => !EXCLUDED_AXES.has(a.axis))
+  if (all.length === 0) return []
 
   // Per-axis exhaustion check : if an axis has no active angle, OR all its
   // active angles have used_count >= threshold, flip its inactive angles back

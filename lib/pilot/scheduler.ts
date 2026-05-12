@@ -6,12 +6,19 @@ import { getServerSupabase } from '@/lib/supabase/server'
 // as 'HH:MM' strings, daily quotas are computed against Bogotá calendar days.
 const TZ = 'America/Bogota'
 
-// Hard scheduling rule: 2 posts per day, total, across all content types,
-// at exactly these Bogotá-local times. Overrides any per-type slots/quotas
-// that may still live in pilot_settings (kept for backward compatibility but
-// no longer consulted for slot/quota decisions — see findNextSlot below).
-export const SHARED_SLOTS = ['08:00', '12:00'] as const
-export const MAX_POSTS_PER_DAY = 2
+export type PilotContentType = 'carousel' | 'single_post' | 'story'
+
+// Hard scheduling rule: 1 post per content_type per day at a fixed Bogotá-local
+// slot. Max 3 posts/day total. If a given type has no draft for a day, that
+// slot stays empty — we never double up on the same type within a day, and we
+// never substitute another type's slot. Per-type slots in pilot_settings are
+// kept for backward compatibility but no longer consulted.
+export const TYPE_SLOTS: Record<PilotContentType, string> = {
+  carousel: '08:00',
+  single_post: '12:00',
+  story: '18:00'
+}
+export const MAX_POSTS_PER_DAY = 3
 
 // 30 min around an existing slot is treated as occupied. Catches legacy posts
 // scheduled at off-grid times (e.g. 07:50) that would otherwise sit next to
@@ -21,8 +28,6 @@ const SLOT_OCCUPATION_TOLERANCE_MIN = 30
 // Don't schedule a post sooner than this many minutes from now — gives PE
 // time to receive the request and not race the moment "publish now".
 const MIN_LEAD_MINUTES = 30
-
-export type PilotContentType = 'carousel' | 'single_post' | 'story'
 
 export interface PilotSettings {
   enabled: boolean
@@ -84,46 +89,59 @@ function utcForSlot(bogotaDay: Date, slotStr: string): Date {
   return fromZonedTime(slotZoned, TZ)
 }
 
-export async function findNextSlot(fromDate: Date = new Date()): Promise<Date | null> {
+export async function findNextSlot(
+  contentType: PilotContentType,
+  fromDate: Date = new Date()
+): Promise<Date | null> {
   const settings = await getPilotSettings()
   const supabase = getServerSupabase()
 
   const horizonEnd = addDays(fromDate, settings.scheduling_horizon_days)
 
-  // Posts already locked into a future slot — pulled from pilot_scheduled_at
-  // so we account for slots reserved before PE has confirmed the schedule.
+  // Pull both pilot_scheduled_at AND content_type so we can enforce "≤1 post
+  // per (day, content_type)" — a carousel slot taken at 08:00 blocks the next
+  // carousel from landing on that day even if 12:00/18:00 are free.
   const { data: occupied } = await supabase
     .from('ig_posts')
-    .select('pilot_scheduled_at')
+    .select('pilot_scheduled_at, content_type')
     .gte('pilot_scheduled_at', fromDate.toISOString())
     .lte('pilot_scheduled_at', horizonEnd.toISOString())
     .not('pilot_scheduled_at', 'is', null)
 
-  const occupiedDates: Date[] = (occupied ?? [])
+  const occupiedRows = (occupied ?? [])
     .filter((s) => s.pilot_scheduled_at)
-    .map((s) => parseISO(s.pilot_scheduled_at as string))
+    .map((s) => ({
+      date: parseISO(s.pilot_scheduled_at as string),
+      type: (s.content_type ?? 'carousel') as PilotContentType
+    }))
 
   const minLead = addMinutes(fromDate, MIN_LEAD_MINUTES)
   const tolMs = SLOT_OCCUPATION_TOLERANCE_MIN * 60 * 1000
+  const slotStr = TYPE_SLOTS[contentType]
 
   for (let dayOffset = 0; dayOffset <= settings.scheduling_horizon_days; dayOffset++) {
     const day = addDays(fromDate, dayOffset)
     const dayKey = bogotaDayKey(day)
 
-    const countOnDay = occupiedDates.filter((d) => bogotaDayKey(d) === dayKey).length
-    if (countOnDay >= MAX_POSTS_PER_DAY) continue
+    // Same-type-already-on-day → skip the day for this type. We never publish
+    // two carousels (or two single_posts, or two stories) on the same day.
+    const sameTypeOnDay = occupiedRows.some(
+      (r) => bogotaDayKey(r.date) === dayKey && r.type === contentType
+    )
+    if (sameTypeOnDay) continue
 
-    for (const slotStr of SHARED_SLOTS) {
-      const slotUtc = utcForSlot(day, slotStr)
-      if (isBefore(slotUtc, minLead)) continue
+    const slotUtc = utcForSlot(day, slotStr)
+    if (isBefore(slotUtc, minLead)) continue
 
-      const isOccupied = occupiedDates.some(
-        (d) => Math.abs(d.getTime() - slotUtc.getTime()) < tolMs
-      )
-      if (isOccupied) continue
+    // Off-grid legacy post sitting within tolerance of this slot still blocks
+    // (would visually look like a duplicate). Cross-type collisions only
+    // happen on legacy data; normal data lands on distinct 08/12/18 slots.
+    const isOccupied = occupiedRows.some(
+      (r) => Math.abs(r.date.getTime() - slotUtc.getTime()) < tolMs
+    )
+    if (isOccupied) continue
 
-      return slotUtc
-    }
+    return slotUtc
   }
 
   return null
@@ -146,8 +164,8 @@ export async function pilotSchedulePost(
   if (error || !post) throw new Error(`Post not found: ${error?.message ?? postId}`)
 
   const contentType = (post.content_type ?? 'carousel') as PilotContentType
-  const slot = await findNextSlot()
-  if (!slot) throw new Error('No slot available in scheduling horizon')
+  const slot = await findNextSlot(contentType)
+  if (!slot) throw new Error(`No ${contentType} slot available in scheduling horizon`)
 
   const platforms = await getPlatformsForType(contentType)
 
