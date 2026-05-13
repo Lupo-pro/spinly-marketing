@@ -5,7 +5,7 @@ import { SPINLY_BRAND } from '../_styles/brand'
 
 export const dynamic = 'force-dynamic'
 
-const HORIZON_DAYS = 7
+const HORIZON_DAYS = 30
 
 export default async function CalendarPage() {
   const supabase = getServerSupabase()

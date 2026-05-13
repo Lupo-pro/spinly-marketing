@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS pilot_settings (
   max_stories_per_day int DEFAULT 5,
   -- Min spacing between two posts of the same content_type.
   min_hours_between_same_type int DEFAULT 4,
-  scheduling_horizon_days int DEFAULT 7,
+  scheduling_horizon_days int DEFAULT 30,
   earliest_hour int DEFAULT 8,
   latest_hour int DEFAULT 21,
   updated_at timestamptz DEFAULT now()

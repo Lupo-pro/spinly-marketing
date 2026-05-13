@@ -35,7 +35,7 @@ const TYPE_SLOTS: Record<ContentType, string> = {
 }
 const TYPES: ContentType[] = ['carousel', 'single_post', 'story']
 const MIN_LEAD_MINUTES = 30
-const DEFAULT_MIN_DAYS = 14
+const DEFAULT_MIN_DAYS = 30
 // Safety cap so a bad horizon argument doesn't spawn hundreds of Haiku calls.
 const DEFAULT_MAX_RUNS = 30
 
