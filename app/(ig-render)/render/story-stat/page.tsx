@@ -21,12 +21,24 @@ export default function StoryStatPage({ searchParams }: Props) {
 
   const labelLines = label.split('\n').slice(0, 2)
 
+  // Adaptive sizing — same rationale as stat-bombe: stat must always fit the
+  // 920px safe box, whether it's "x6" or "12,847" or "9/mes".
+  const statLen = Array.from(stat.trim()).length
+  const statFontSize =
+    statLen <= 2 ? 600 : statLen === 3 ? 460 : statLen === 4 ? 360 : statLen === 5 ? 280 : 240
+  const statLetterSpacing = statLen <= 3 ? -25 : statLen === 4 ? -16 : -10
+
   return (
     <div className="slide story story-stat">
       <div className="brand-top-right">SPINLY</div>
 
       <div className="ss-content">
-        <div className="ss-stat">{stat}</div>
+        <div
+          className="ss-stat"
+          style={{ fontSize: `${statFontSize}px`, letterSpacing: `${statLetterSpacing}px` }}
+        >
+          {stat}
+        </div>
         <div className="ss-label">
           {labelLines.map((line, i) => (
             <div key={i}>{line}</div>

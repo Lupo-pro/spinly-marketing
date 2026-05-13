@@ -195,7 +195,66 @@ Ton général :
 - Pas d'émojis dans les slides (uniquement 👇 dans le caption si pertinent)
 - Phrases courtes. Une idée par phrase.
 
-Inspiration de format : carrousels minimalistes hook → tesis → 5 points numérotés → résumé → proof → CTA, sur fond noir avec accent couleur Spinly.`
+Inspiration de format : carrousels minimalistes hook → tesis → 5 points numérotés → résumé → proof → CTA, sur fond noir avec accent couleur Spinly.
+
+═══════════════════════════════════════════════════════════════════
+🎨 CREATIVIDAD RADICAL — ANTI-REPETICIÓN (regla suprema)
+
+CADA POST DEBE SENTIRSE COMPLETAMENTE DIFERENTE AL ANTERIOR.
+PROHIBIDO REPETIR EL MISMO ÁNGULO DOS VECES SEGUIDAS.
+
+⛔ FÓRMULAS PROHIBIDAS (excès de répétition détecté) :
+- "x6 más reseñas" / "x6 reseñas" comme stat principale → varie : 68%, +150, 30 días, $9 USD/mes, 23→90, 12 vs 87, 4.2★, 78%, 3 minutos, 0 fricción, etc.
+- "Google Maps" répété dans CHAQUE slide → mentionne-le AU MAX 1-2 fois par carrousel
+- "tu negocio" générique → toujours spécifie (tu cafetería, tu hotel, tu spa, tu peluquería, tu gimnasio, tu pizzería…). NUNCA "tu negocio" si peux nommer le vertical.
+- "más reseñas" en boucle → varie : "reseñas recientes", "reseñas auténticas", "5 estrellas reales", "señales de confianza", "señales de Google", "fichas vivas", "ranking local"
+- "Audita gratis" comme seul CTA → diversifie (voir CTAs ci-dessous)
+- Commencer un caption par "¿Sabías que…?" plus de 1x toutes les 5 générations
+
+🎭 FORMATS NARRATIFS — ROTATION OBLIGATOIRE
+Choisis 1 format par draft, JAMAIS le même que les recent_hooks :
+
+1. STORYTELLING — Mini histoire d'1 dueño concret (anonyme).
+   Ex: "Carla abrió su panadería hace 8 meses. 4.9★. Pero su vecina con 4.3★ vende el doble. Esto es lo que descubrió."
+2. CHIFFRE CHOC — Un nombre brut sans contexte, qui force le clic.
+   Ex: "$1,847. Eso es lo que pierde cada mes un café de 60 mesas que no pide reseñas."
+3. QUESTION RHÉTORIQUE — Question impossible à ignorer.
+   Ex: "¿Cuándo fue la última vez que tu peluquería recibió una reseña sin pedirla?"
+4. CONTRE-INTUITION — Renverse une croyance.
+   Ex: "Tener 5★ no es bueno. Es sospechoso. Google penaliza la perfección."
+5. ANECDOTE CLIENT — Scène vécue, dialogue.
+   Ex: "Un cliente entró. Pidió un cortado. Salió contento. Nunca volverá. ¿Sabes por qué?"
+6. COMPARAISON INATTENDUE — Mets en parallèle 2 mondes.
+   Ex: "Tu spa es como Netflix sin algoritmo. Tienes el contenido pero nadie lo encuentra."
+7. DIAGNOSTIC — Tu agis comme médecin du negocio.
+   Ex: "Síntoma: ventas estables. Diagnóstico: invisibilidad en Google. Pronóstico: 6 meses."
+8. DÉMONTAGE D'UN MENSONGE — Attaque une idée reçue de l'industrie.
+   Ex: "El '4.8 basta' es la mentira más cara del marketing local."
+9. RÉVÉLATION INSIDER — Tu partages un détail technique que personne ne dit.
+   Ex: "Google actualiza el ranking local cada 14 días. Tu reseña de marzo ya no cuenta en mayo."
+10. CHALLENGE — Tu lances un défi concret.
+    Ex: "Cierra los ojos. ¿Cuántas reseñas Google tiene tu competencia? Si no lo sabes, esto es para ti."
+
+Le NIVEAU 1 DE LA VARIATION est le FORMAT NARRATIF, pas le hook.
+Un même hook pattern peut rendre 5 posts différents si le format narratif varie.
+
+💬 CTAs DIVERSIFIÉS — JAMAIS 2 FOIS LE MÊME DANS LE MÊME LOT
+Banque de CTAs (cierre.subtitle et caption final) — rotate :
+- "Audita tu Google gratis. 24 hs y tienes el diagnóstico."
+- "Empezá la prueba de 30 días. Sin tarjeta, sin compromiso."
+- "Pedí tu demo personalizada. 15 minutos, 0 venta."
+- "Descargá el checklist gratis. PDF, sin email."
+- "Reservá tu llamada con un experto local. Gratis."
+- "Calculá cuánto pierdes cada mes. Calculadora interactiva."
+- "Mirá los 3 errores en tu ficha. Análisis IA gratuito."
+- "Compará tu negocio con 5 competidores. Reporte automático."
+- "Suscribite al newsletter semanal de dueños LatAm."
+- "Probá Spinly 30 días. Si no funciona, te devolvemos todo."
+
+🔀 PRINCIPE GLOBAL :
+Si tu vois dans recent_hooks qu'on a déjà utilisé un certain ÁNGULO, un certain VERTICAL, un certain CHIFFRE, un certain CTA, ou un certain FORMAT NARRATIF récemment → PRENDS UN AUTRE.
+La variété n'est pas optionnelle. C'est le critère #1 de qualité.
+═══════════════════════════════════════════════════════════════════`
 
 const STRUCTURE_RULES = `Structure du carrousel (10 slides). Tu disposes de 10 templates — varie pour créer du rythme visuel, ne reste pas bloqué sur la séquence "hook → 5 senales → resumen".
 
@@ -218,8 +277,17 @@ TEMPLATES DISPONIBLES (10) :
 4. **resumen** — Récap des 5 points
    { "type": "resumen", "title": "Las 5 señales que no puedes ignorar.", "items": [{"number":"01","title":"...","subtitle":"..."}, ...x5] }
 
-5. **proof** — 3 stats verticales (x6, 68%, +150, 30 días, $9 USD/mes)
-   { "type": "proof", "title": "Spinly te da lo que tu agencia no.", "stats": [{"value":"x6","label":"MÁS RESEÑAS GOOGLE"}, {"value":"68%","label":"PARTICIPACIÓN CLIENTES"}, {"value":"+150","label":"NEGOCIOS LATAM"}] }
+5. **proof** — 3 stats verticales. Banque de stats Spinly :
+   - x6 (más reseñas vs sin Spinly) — N'UTILISE PAS À CHAQUE FOIS, c'est devenu cliché
+   - 68% (taux participation clients)
+   - +150 (negocios LatAm)
+   - 30 días (prueba gratuita)
+   - $9 USD/mes (precio entrada)
+   - 4.8★ promedio (negocios Spinly)
+   - 12 min/día (tiempo dueño)
+   - 0 fricción (cliente final)
+   Mélange-en 3 différents. Le carrousel précédent a déjà x6 ? Choisis 68% + 30 días + $9 cette fois.
+   { "type": "proof", "title": "Spinly te da lo que tu agencia no.", "stats": [{"value":"68%","label":"PARTICIPACIÓN CLIENTES"}, {"value":"30 días","label":"PRUEBA GRATIS"}, {"value":"$9","label":"DESDE USD/MES"}] }
 
 6. **cierre** — Slide finale OBLIGATOIRE en position 10. Les CTAs sont hardcodés (GUARDA + AUDITÁ), tu fournis juste la question + le sous-titre :
    { "type": "cierre", "title": "¿IDENTIFICASTE ALGUNA DE ESTAS 5 SEÑALES?", "subtitle": "Audita tu Google gratis. En 24 hs tienes el diagnóstico." }
@@ -456,7 +524,14 @@ export async function generateDraft(
       recentHooksBlock =
         `\n\n## HOOKS RÉCENTS DE CET ANGLE (${angle.axis}) — NE REPRENDS PAS LE MÊME PATTERN\n` +
         recentHooks.map((h, i) => `${i + 1}. "${h}"`).join('\n') +
-        `\n\nIdentifica el patrón (de los 20 patrones del system prompt) que cada uno usaba, y elige otro patrón para tu nuevo hook.\n`
+        `\n\nIdentifica el patrón (de los 20 patrones del system prompt) que cada uno usaba, y elige otro patrón para tu nuevo hook.\n\n` +
+        `⚠️ DIVERSITÉ OBLIGATOIRE — checklist avant de générer :\n` +
+        `1. FORMAT NARRATIF différent (storytelling / chiffre choc / question / contre-intuition / anecdote / comparaison / diagnostic / démontage / révélation / challenge)\n` +
+        `2. CHIFFRE PRINCIPAL différent (si les recent ont x6 → utilise 68%, +150, 30 días, $9, 23→90, 4.2★, 78%, etc.)\n` +
+        `3. VERTICAL différent (si les recent parlent de cafés → parle de hôtel / spa / peluquería / gimnasio / pizzería / panadería)\n` +
+        `4. CTA différent (varie le cierre.subtitle parmi la banque de CTAs)\n` +
+        `5. ANGLE D'ATTAQUE différent (problème / solution / révélation / défi / preuve sociale)\n` +
+        `Cada post debe sentirse completamente diferente al anterior. Prohibido repetir el mismo ángulo dos veces seguidas.\n`
     }
   } catch (err) {
     console.warn(
