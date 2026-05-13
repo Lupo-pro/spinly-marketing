@@ -12,7 +12,9 @@
     "seed:angles": "tsx --env-file=.env.local scripts/seed-ig-angles.ts",
     "test:render": "tsx --env-file=.env.local scripts/test-render.ts",
     "setup:ig-account": "tsx --env-file=.env.local scripts/setup-ig-account.ts",
-    "calendar:rebalance": "tsx --env-file=.env.local scripts/rebalance-pilot-calendar.ts"
+    "calendar:rebalance": "tsx --env-file=.env.local scripts/rebalance-pilot-calendar.ts",
+    "calendar:fill": "tsx --env-file=.env.local scripts/fill-calendar-gaps.ts",
+    "calendar:saturate": "npm run calendar:fill && npm run calendar:rebalance"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.94.0",
