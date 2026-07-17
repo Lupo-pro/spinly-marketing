@@ -8,10 +8,16 @@ export const maxDuration = 30
 
 const ADMIN_EMAIL = 'corporate.lupo@gmail.com'
 
+// PE reports a completed destination as 'done' (observed live), older docs
+// said 'published' — accept both or posts stay stuck in 'publishing' forever.
+function isDestPublished(s: string): boolean {
+  return s === 'published' || s === 'done'
+}
+
 function deriveStatus(destinations: { status: string }[]): string {
   if (destinations.length === 0) return 'queued'
-  const allPublished = destinations.every((d) => d.status === 'published')
-  const anyPublished = destinations.some((d) => d.status === 'published')
+  const allPublished = destinations.every((d) => isDestPublished(d.status))
+  const anyPublished = destinations.some((d) => isDestPublished(d.status))
   const allFailed = destinations.every((d) => d.status === 'failed')
   if (allPublished) return 'published'
   if (anyPublished) return 'partial'

@@ -96,7 +96,12 @@ export async function findNextSlot(
   const settings = await getPilotSettings()
   const supabase = getServerSupabase()
 
-  const horizonEnd = addDays(fromDate, settings.scheduling_horizon_days)
+  // +1 day: horizonEnd bounds the occupied-slots query, and the day loop below
+  // can pick slots on day `fromDate + horizon_days` at an hour LATER than
+  // fromDate's time-of-day. Cutting the query at exactly +horizon_days made
+  // those end-of-horizon slots invisible → every subsequent call stacked onto
+  // the same last day (incident 2026-07-17: 28 posts on the same slot).
+  const horizonEnd = addDays(fromDate, settings.scheduling_horizon_days + 1)
 
   // Pull both pilot_scheduled_at AND content_type so we can enforce "≤1 post
   // per (day, content_type)" — a carousel slot taken at 08:00 blocks the next
